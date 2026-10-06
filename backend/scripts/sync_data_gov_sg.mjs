@@ -1,4 +1,4 @@
-import "dotenv/config";
+import "../config.js";
 import mysql from "mysql2/promise";
 
 // 1. List of Political Parties
@@ -57,7 +57,7 @@ async function fetchJsonWithRetry(url, options) {
   const maxAttempts = 10;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
-    const res = await fetch(url, options);
+    const res = await fetch(url, { ...options, signal: AbortSignal.timeout(30000) });
 
     if (res.ok) {
       return await res.json();
@@ -366,7 +366,7 @@ async function main() {
     host: process.env.DB_HOST || "127.0.0.1",
     port: Number(process.env.DB_PORT || 3306),
     user: process.env.DB_USER || "app_user",
-    password: process.env.DB_PASSWORD || "app_password",
+    password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME || "election_db",
   });
 

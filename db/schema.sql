@@ -3,25 +3,11 @@
 -- =========================================
 USE election_db;
 SET NAMES utf8mb4;
-SET FOREIGN_KEY_CHECKS = 0;
-
--- Drop derived tables first
-DROP TABLE IF EXISTS ge_top_parties;
-DROP TABLE IF EXISTS ge_summary;
-
--- Drop base tables
-DROP TABLE IF EXISTS ge_candidate_results;
-DROP TABLE IF EXISTS ge_elector_stats;
-DROP TABLE IF EXISTS ge_dates;
-DROP TABLE IF EXISTS political_parties;
-
-SET FOREIGN_KEY_CHECKS = 1;
-
 -- -----------------------------------------
 -- 1) political_parties
 -- API: abbreviation, political_party
 -- -----------------------------------------
-CREATE TABLE political_parties (
+CREATE TABLE IF NOT EXISTS political_parties (
   abbreviation VARCHAR(32) NOT NULL,
   political_party VARCHAR(255) NULL,
 
@@ -36,7 +22,7 @@ CREATE TABLE political_parties (
 -- 2) ge_dates
 -- API: year, nomination_day, polling_day
 -- -----------------------------------------
-CREATE TABLE ge_dates (
+CREATE TABLE IF NOT EXISTS ge_dates (
   year INT NOT NULL,
   nomination_day DATE NULL,
   polling_day DATE NULL,
@@ -51,7 +37,7 @@ CREATE TABLE ge_dates (
 -- 3) ge_elector_stats
 -- API: year, constituency, no_of_registered_electors, no_of_rejected_votes, no_of_spoilt_ballot_papers
 -- -----------------------------------------
-CREATE TABLE ge_elector_stats (
+CREATE TABLE IF NOT EXISTS ge_elector_stats (
   year INT NOT NULL,
   constituency VARCHAR(255) NOT NULL,
 
@@ -74,7 +60,7 @@ CREATE TABLE ge_elector_stats (
 -- - vote_percentage in dataset is typically a fraction (0..1).
 -- - UNIQUE includes candidates to avoid collisions for GRC where same party has multiple candidates.
 -- -----------------------------------------
-CREATE TABLE ge_candidate_results (
+CREATE TABLE IF NOT EXISTS ge_candidate_results (
   id BIGINT NOT NULL AUTO_INCREMENT,
 
   year INT NOT NULL,
@@ -96,12 +82,7 @@ CREATE TABLE ge_candidate_results (
   KEY idx_results_year (year),
   KEY idx_results_constituency (constituency),
   KEY idx_results_type (constituency_type),
-  KEY idx_results_party (party),
-
-  CONSTRAINT fk_results_party
-    FOREIGN KEY (party) REFERENCES political_parties (abbreviation)
-    ON UPDATE CASCADE
-    ON DELETE RESTRICT
+  KEY idx_results_party (party)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- -----------------------------------------
@@ -110,7 +91,7 @@ CREATE TABLE ge_candidate_results (
 -- margin_pct is stored as percentage points (e.g., 12.34)
 -- turnout_pct is stored as percentage (e.g., 93.21)
 -- -----------------------------------------
-CREATE TABLE ge_summary (
+CREATE TABLE IF NOT EXISTS ge_summary (
   year INT NOT NULL,
   constituency VARCHAR(255) NOT NULL,
   constituency_type VARCHAR(8) NULL,
@@ -127,19 +108,14 @@ CREATE TABLE ge_summary (
   KEY idx_summary_year (year),
   KEY idx_summary_constituency (constituency),
   KEY idx_summary_type (constituency_type),
-  KEY idx_summary_winner (winner_party),
-
-  CONSTRAINT fk_summary_winner
-    FOREIGN KEY (winner_party) REFERENCES political_parties (abbreviation)
-    ON UPDATE CASCADE
-    ON DELETE SET NULL
+  KEY idx_summary_winner (winner_party)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- -----------------------------------------
 -- 6) ge_top_parties (derived)
 -- Top 3 parties per (year, constituency)
 -- -----------------------------------------
-CREATE TABLE ge_top_parties (
+CREATE TABLE IF NOT EXISTS ge_top_parties (
   year INT NOT NULL,
   constituency VARCHAR(255) NOT NULL,
   party VARCHAR(32) NOT NULL,
@@ -151,22 +127,11 @@ CREATE TABLE ge_top_parties (
   PRIMARY KEY (year, constituency, party),
 
   KEY idx_top_rank (year, constituency, rank_no),
-  KEY idx_top_party (party),
-
-  CONSTRAINT fk_top_party
-    FOREIGN KEY (party) REFERENCES political_parties (abbreviation)
-    ON UPDATE CASCADE
-    ON DELETE RESTRICT
+  KEY idx_top_party (party)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
-ALTER TABLE ge_candidate_results
-  DROP FOREIGN KEY fk_results_party;
 
-ALTER TABLE ge_top_parties
-  DROP FOREIGN KEY fk_top_party;
 
-ALTER TABLE ge_summary
-  DROP FOREIGN KEY fk_summary_winner;
 
 
 USE election_db;
@@ -217,4 +182,14 @@ CREATE TABLE IF NOT EXISTS ge_boundary_features (
   KEY idx_bf_year (year),
   KEY idx_bf_const (constituency),
   KEY idx_bf_type (constituency_type)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+
+-- Local login accounts are provisioned by npm run create-users.
+CREATE TABLE IF NOT EXISTS users (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  username VARCHAR(100) NOT NULL UNIQUE,
+  password_hash VARCHAR(255) NOT NULL,
+  role_name VARCHAR(32) NOT NULL DEFAULT 'civilian',
+  area VARCHAR(255) NULL,
+  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;

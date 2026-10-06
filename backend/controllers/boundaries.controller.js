@@ -1,6 +1,4 @@
 // controllers/boundaries.controller.js
-const { buildPool } = require("../db");
-const pool = buildPool();
 
 function upperTrim(v) {
   return String(v || "").trim().toUpperCase();
@@ -37,10 +35,11 @@ function inferTypeFromBoundaryName(boundaryName) {
   return "";
 }
 
-async function getBoundariesByYear(req, res) {
+async function getBoundariesByYear(req, res, next) {
   try {
+    const pool = req.app.locals.pool;
     const year = Number(req.query.year);
-    if (!Number.isFinite(year)) {
+    if (!Number.isInteger(year) || year < 1950 || year > 2100) {
       res.status(400).json({ message: "year is required (number)." });
       return;
     }
@@ -67,7 +66,7 @@ async function getBoundariesByYear(req, res) {
 
     res.json(geojson);
   } catch (e) {
-    res.status(500).json({ message: String(e && e.message ? e.message : e) });
+    next(e);
   }
 }
 
@@ -85,10 +84,11 @@ async function getBoundariesByYear(req, res) {
 //     ...
 //   }
 // }
-async function getBoundariesSummaryByYear(req, res) {
+async function getBoundariesSummaryByYear(req, res, next) {
   try {
+    const pool = req.app.locals.pool;
     const year = Number(req.query.year);
-    if (!Number.isFinite(year)) {
+    if (!Number.isInteger(year) || year < 1950 || year > 2100) {
       res.status(400).json({ message: "year is required (number)." });
       return;
     }
@@ -177,7 +177,7 @@ async function getBoundariesSummaryByYear(req, res) {
       summary,
     });
   } catch (e) {
-    res.status(500).json({ message: String(e && e.message ? e.message : e) });
+    next(e);
   }
 }
 

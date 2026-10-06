@@ -1,5 +1,3 @@
-const { buildPool } = require("../db");
-const pool = buildPool();
 
 function splitCsvParam(value) {
   const s = String(value || "").trim();
@@ -30,8 +28,9 @@ function buildInClause(values, params) {
   return { sql: `(${placeholders.join(",")})`, params };
 }
 
-async function getDashboardOptions(req, res) {
+async function getDashboardOptions(req, res, next) {
   try {
+    const pool = req.app.locals.pool;
     const [yearsRows] = await pool.query(`
       SELECT DISTINCT year
       FROM ge_summary
@@ -89,12 +88,13 @@ async function getDashboardOptions(req, res) {
       }),
     });
   } catch (e) {
-    res.status(500).json({ message: String(e && e.message ? e.message : e) });
+    next(e);
   }
 }
 
-async function searchDashboardRows(req, res) {
+async function searchDashboardRows(req, res, next) {
   try {
+    const pool = req.app.locals.pool;
     const contestingParties = splitCsvParam(req.query.contesting);
     const years = splitCsvParam(req.query.years);
     const winnerParties = splitCsvParam(req.query.winners);
@@ -184,16 +184,17 @@ async function searchDashboardRows(req, res) {
       }),
     });
   } catch (e) {
-    res.status(500).json({ message: String(e && e.message ? e.message : e) });
+    next(e);
   }
 }
 
-async function getDashboardDetails(req, res) {
+async function getDashboardDetails(req, res, next) {
   try {
+    const pool = req.app.locals.pool;
     const year = Number(req.query.year);
     const constituency = String(req.query.constituency || "").trim();
 
-    if (!Number.isFinite(year) || !constituency) {
+    if (!Number.isInteger(year) || year < 1950 || year > 2100 || !constituency) {
       res
         .status(400)
         .json({ message: "Missing or invalid year / constituency." });
@@ -271,7 +272,7 @@ async function getDashboardDetails(req, res) {
       elector: electorRows.length > 0 ? electorRows[0] : null,
     });
   } catch (e) {
-    res.status(500).json({ message: String(e && e.message ? e.message : e) });
+    next(e);
   }
 }
 
