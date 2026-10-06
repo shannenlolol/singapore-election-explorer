@@ -549,8 +549,8 @@ export default function MapPage() {
       setErrorText("");
       try {
         const responses = await Promise.all([
-          fetch(`/api/boundaries?year=${year}`, { signal: controller.signal, credentials: "include" }),
-          fetch(`/api/boundaries/summary?year=${year}`, { signal: controller.signal, credentials: "include" }),
+          fetch(`/api/boundaries?year=${year}`, { signal: controller.signal }),
+          fetch(`/api/boundaries/summary?year=${year}`, { signal: controller.signal }),
         ]);
         const [geojson, details] = await Promise.all(responses.map(async response => {
           const data = await response.json();

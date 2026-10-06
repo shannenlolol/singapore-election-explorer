@@ -287,3 +287,8 @@ input::placeholder {
   background: rgba(255,255,255,0.18);
   color: rgba(255,255,255,0.95);
 }
+
+.data-status { display: flex; flex-direction: column; gap: 4px; font-size: 12px; line-height: 1.5; color: #c4cbd8; max-width: 420px; }
+.data-status a { color: #8bdcf7; text-decoration: underline; }
+.topbar-inner { flex-wrap: wrap; gap: 12px; }
+@media (max-width: 700px) { .data-status { width: 100%; max-width: none; } }

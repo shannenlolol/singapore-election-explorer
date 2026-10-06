@@ -370,6 +370,10 @@ async function main() {
     database: process.env.DB_NAME || "election_db",
   });
 
+  try {
+    await db.execute(`INSERT INTO data_sync_status (id, status, last_started_at)
+      VALUES (1, 'running', UTC_TIMESTAMP())
+      ON DUPLICATE KEY UPDATE status = 'running', last_started_at = UTC_TIMESTAMP()`);
   // ---- Introspect current table schemas (so we insert into the correct columns) ----
   const electorCols = await getTableColumns(db, "ge_elector_stats");
   const partiesCols = await getTableColumns(db, "political_parties");
@@ -653,8 +657,19 @@ try {
 
   await db.query(backfillTypeSql);
 
-  await db.end();
-  console.log("Done.");
+    await db.execute(`UPDATE data_sync_status SET status = 'succeeded',
+      last_successful_at = UTC_TIMESTAMP(), last_finished_at = UTC_TIMESTAMP() WHERE id = 1`);
+    console.log("Done.");
+  } catch (error) {
+    try {
+      await db.execute("UPDATE data_sync_status SET status = 'failed', last_finished_at = UTC_TIMESTAMP() WHERE id = 1");
+    } catch (statusError) {
+      console.error("Could not record import failure:", statusError.message);
+    }
+    throw error;
+  } finally {
+    await db.end();
+  }
 }
 
 main().catch((e) => {

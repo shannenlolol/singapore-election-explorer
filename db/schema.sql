@@ -184,12 +184,11 @@ CREATE TABLE IF NOT EXISTS ge_boundary_features (
   KEY idx_bf_type (constituency_type)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
--- Local login accounts are provisioned by npm run create-users.
-CREATE TABLE IF NOT EXISTS users (
-  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
-  username VARCHAR(100) NOT NULL UNIQUE,
-  password_hash VARCHAR(255) NOT NULL,
-  role_name VARCHAR(32) NOT NULL DEFAULT 'civilian',
-  area VARCHAR(255) NULL,
-  created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+-- Import timestamps refer to successful local imports, not upstream publication dates.
+CREATE TABLE IF NOT EXISTS data_sync_status (
+  id TINYINT NOT NULL PRIMARY KEY,
+  status ENUM('running', 'succeeded', 'failed') NOT NULL,
+  last_started_at DATETIME NULL,
+  last_successful_at DATETIME NULL,
+  last_finished_at DATETIME NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;

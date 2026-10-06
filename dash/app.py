@@ -1,6 +1,5 @@
 from dash import Dash, html, dcc, dash_table, callback_context, no_update
 from dash.dependencies import Input, Output, State
-from flask import request
 import os
 import requests
 import plotly.graph_objects as go
@@ -246,13 +245,11 @@ def log(*args):
 
 def backend_get_json(path, params=None):
     url = f"{BACKEND_BASE}{path}"
-    incoming_cookies = dict(request.cookies)
 
 
     r = requests.get(
         url,
         params=params,
-        cookies=incoming_cookies,
         headers={
             "Accept": "application/json",
             "Cache-Control": "no-store",
@@ -849,7 +846,7 @@ app.layout = html.Div(
     [
         dcc.Interval(id="boot", interval=80, n_intervals=0, max_intervals=1),
 
-        html.Div(id="auth-warning", className="alert", style={"display": "none"}),
+        html.Div(id="data-warning", className="alert", style={"display": "none"}),
 
         dcc.Store(id="store-options", data=None),
         dcc.Store(id="store-expanded", data=None),
@@ -1021,8 +1018,8 @@ def toggle_split_layout(expanded_state):
 # ----------------------------
 @app.callback(
     Output("store-options", "data"),
-    Output("auth-warning", "children"),
-    Output("auth-warning", "style"),
+    Output("data-warning", "children"),
+    Output("data-warning", "style"),
     Input("boot", "n_intervals"),
 )
 def boot_load_options(_n):
@@ -1030,7 +1027,7 @@ def boot_load_options(_n):
         data = backend_get_json("/api/dashboard/options")
         return data, "", {"display": "none"}
     except Exception:
-        return None, "Not authenticated. Please log in on the React app and refresh.", {
+        return None, "Election data is unavailable. Please try again later.", {
             "display": "block",
             "marginBottom": "12px",
         }

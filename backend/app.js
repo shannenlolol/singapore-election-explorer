@@ -1,9 +1,6 @@
 const express = require("express");
 const cors = require("cors");
-const cookieParser = require("cookie-parser");
 const { createProxyMiddleware } = require("http-proxy-middleware");
-const { requireAuth } = require("./auth");
-const { createAuthRouter } = require("./routes/auth.routes");
 const dashboardRoutes = require("./routes/dashboard.routes");
 const boundariesRoutes = require("./routes/boundaries.routes");
 
@@ -11,14 +8,13 @@ function createApp({ pool, config }) {
   const app = express();
   app.disable("x-powered-by");
   app.locals.pool = pool;
-  app.use(cors({ origin: config.origins, credentials: true }));
-  app.use(cookieParser());
+  app.use(cors({ origin: config.origins, credentials: false }));
   app.use((_req, res, next) => {
     res.set("X-Content-Type-Options", "nosniff");
     res.set("Cache-Control", "no-store");
     next();
   });
-  // Reject cross-site writes before auth handlers, including login and logout.
+  // Dash callbacks use POST; accept them only from the configured frontend origins.
   app.use((req, res, next) => {
     const origin = req.get("origin");
     if (!["GET", "HEAD", "OPTIONS"].includes(req.method) &&
@@ -28,7 +24,7 @@ function createApp({ pool, config }) {
     next();
   });
   // Proxy before JSON parsing so Dash receives callback request bodies intact.
-  app.use("/dash", requireAuth, createProxyMiddleware({
+  app.use("/dash", createProxyMiddleware({
     target: config.dashUrl,
     changeOrigin: true,
     pathRewrite: path => `/dash${path}`,
@@ -41,9 +37,18 @@ function createApp({ pool, config }) {
     },
   }));
   app.use(express.json({ limit: "16kb" }));
-  app.use("/api/auth", createAuthRouter(pool));
-  app.use("/api/dashboard", requireAuth, dashboardRoutes);
-  app.use("/api/boundaries", requireAuth, boundariesRoutes);
+  app.use("/api/dashboard", dashboardRoutes);
+  app.use("/api/boundaries", boundariesRoutes);
+  app.get("/api/data-status", async (_req, res) => {
+    const [rows] = await pool.query(
+      "SELECT status, DATE_FORMAT(last_successful_at, '%Y-%m-%dT%H:%i:%sZ') AS last_updated FROM data_sync_status WHERE id = 1",
+    );
+    res.json({
+      status: rows[0]?.status || "never_imported",
+      lastUpdated: rows[0]?.last_updated || null,
+      source: { name: "data.gov.sg", url: "https://data.gov.sg/" },
+    });
+  });
   app.get("/api/health", async (_req, res) => {
     try {
       await pool.query("SELECT 1");

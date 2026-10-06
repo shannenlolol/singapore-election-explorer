@@ -1,9 +1,6 @@
-import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import LoginPage from "./pages/LoginPage.jsx";
 import MapPage from "./pages/MapPage.jsx";
 import DashboardPage from "./pages/DashboardPage.jsx";
-import RequireAuth from "./auth/RequireAuth.jsx";
 import Layout from "./components/Layout.jsx";
 
 export default function App() {
@@ -11,27 +8,10 @@ export default function App() {
     <BrowserRouter>
       <Layout>
         <Routes>
-          <Route path="/" element={<Navigate to="/login" replace />} />
-          <Route path="/login" element={<LoginPage />} />
-
-          <Route
-            path="/map"
-            element={
-              <RequireAuth>
-                <MapPage />
-              </RequireAuth>
-            }
-          />
-
-          <Route
-            path="/dashboard"
-            element={
-              <RequireAuth>
-                      <div className="app-content"><DashboardPage /></div>
-                
-              </RequireAuth>
-            }
-          />
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/dashboard" element={<div className="app-content"><DashboardPage /></div>} />
+          <Route path="/map" element={<MapPage />} />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </Layout>
     </BrowserRouter>
