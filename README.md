@@ -1,6 +1,6 @@
 # Singapore Election Explorer
 
-Explore Singapore's general election results through interactive constituency maps, historical comparisons, and party-level vote breakdowns.
+Explore Singapore's general election results through interactive constituency maps, historical comparisons, and party-level vote breakdowns. Open the explorer directly—no account or sign-in required.
 
 Built with **React · Leaflet · Express · MySQL · Python Dash · Plotly**. Originally developed as an academic project, now being refactored into a maintainable portfolio application.
 
@@ -33,17 +33,17 @@ This is an independent historical data explorer, not an official elections servi
 ```text
 Browser → Vite / React (5173)
               ├── /api/*  → Express (4000) → MySQL (3306)
-              └── /dash/* → Express authentication → Dash (8050)
+              └── /dash/* → Express proxy → Dash (8050)
                                                       └── Express API → MySQL
 
 data.gov.sg → manual import script → MySQL
 ```
 
-The frontend uses relative URLs. Vite proxies both the API and embedded dashboard through one browser origin. Express owns authentication and the shared database pool; Dash calls the same API using the browser's session cookie. The Python service binds to loopback and should remain private.
+The frontend uses relative URLs. Vite proxies both the API and embedded dashboard through one browser origin. Express owns the public read-only election API and shared database pool; Dash calls the same API without a session. The Python service binds to loopback and should remain private.
 
 ```text
 backend/     Express app, routes, controllers, import scripts, API tests
-frontend/    React pages, authentication state, Leaflet map, styling
+frontend/    React pages, data freshness, Leaflet map, styling
 dash/        Python dashboard and Plotly charts
 db/          Initial MySQL schema
 docs/        Refactoring roadmap and screenshot assets
@@ -85,17 +85,9 @@ Edit both environment files:
 | --- | --- | --- |
 | `.env` | `MYSQL_ROOT_PASSWORD` | A local database root password |
 | Both files | `DB_PASSWORD` | The **same** local app database password |
-| `backend/.env` | `JWT_SECRET` | A random secret of at least 32 characters |
-| `backend/.env` | `DEMO_USERNAME`, `DEMO_PASSWORD` | Your local login; password must be at least 12 characters and at most 72 UTF-8 bytes |
 | `backend/.env` | `DGS_API_KEY` | Optional data.gov.sg API key for imports |
 
-Generate a JWT secret with:
-
-```bash
-node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
-```
-
-Environment files are ignored by Git. The example values are placeholders; choose your own secrets.
+Local `.env` files are ignored by Git; only `.env.example` templates belong in version control. The example values are placeholders; choose your own secrets.
 
 ### 2. Start MySQL and import data
 
@@ -103,7 +95,6 @@ Environment files are ignored by Git. The example values are placeholders; choos
 docker compose up -d mysql
 docker compose ps
 # Wait for MySQL to become healthy before continuing.
-npm run create-users --prefix backend
 npm run sync:data --prefix backend
 ```
 
@@ -115,7 +106,15 @@ If reusing an existing volume, initialization scripts do not run again. For a da
 docker compose exec -T mysql sh -c 'exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD" election_db' < db/schema.sql
 ```
 
-This initializes missing tables; it is not a versioned migration system and does not alter incompatible existing columns. Changing a password in `.env` does not change a user already stored in MySQL.
+For an older installation that contains accounts, remove the unused account table after applying the schema:
+
+```bash
+docker compose exec -T mysql sh -c 'exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD" election_db' < db/migrations/001-remove-accounts.sql
+```
+
+This migration deletes the old account records. The public explorer does not need them.
+
+The schema initializes missing tables; it is not a versioned migration system and does not alter incompatible existing columns. Changing a password in `.env` does not change a user already stored in MySQL.
 
 ### 3. Start the three application services
 
@@ -137,16 +136,25 @@ python dash/app.py
 npm run dev --prefix frontend
 ```
 
-Open **http://localhost:5173** and sign in with your configured demo account. Check database connectivity at **http://localhost:4000/api/health**.
+Open **http://localhost:5173** to go directly to the Dashboard. Switch to Map using the navigation. Check database connectivity at **http://localhost:4000/api/health**.
 
 Stop each development server with `Ctrl+C`. `docker compose stop` stops MySQL while preserving its data.
 
 ### Troubleshooting
 
-- **Login or API unavailable:** check `backend/.env`, MySQL health, and whether ports 3306/4000 are already occupied.
+- **API unavailable:** check `backend/.env`, MySQL health, and whether ports 3306/4000 are already occupied.
 - **Empty map or dashboard:** confirm the data import completed; an empty database has no results to display.
 - **Dashboard service unavailable:** start `python dash/app.py` and check port 8050. Use the frontend URL to view the embedded dashboard.
-- **Login temporarily blocked:** failed attempts are limited to 20 per IP per 15 minutes.
+
+## Data refresh and freshness
+
+Refresh is a maintainer operation: run `npm run sync:data --prefix backend`. There is no public refresh button or import endpoint. Browsing and filtering only query MySQL; they do not trigger imports.
+
+The header links to data.gov.sg and shows **Data last updated**, meaning the last completed local import, in Singapore time. It is not the publisher's update date. A fresh or older database without an import record shows no completed import; running and failed imports are explicitly indicated. Since the importer is not yet atomic, a failed import may leave partial data even when an older successful timestamp exists. Status is checked once a minute.
+
+## Start from VS Code
+
+Open this folder in VS Code. Use **Terminal → Run Task → Explorer: database**, wait for MySQL to become healthy, then run **Explorer: start app** to launch the API, dashboard, and frontend in dedicated terminals. Install dependencies and configure the environment first using the instructions above. Stop any existing servers on ports 4000, 8050, and 5173 before starting another copy. The Python task uses the macOS/Linux `.venv/bin/python` path.
 
 ## Development checks
 
@@ -157,7 +165,7 @@ npm run build --prefix frontend
 python -m py_compile dash/app.py
 ```
 
-GitHub Actions runs these checks and a Dash page smoke test. API regression tests use a test database adapter and cover sessions, authentication failures, origin checks, input validation, rate limiting, and database health responses. They do not replace full MySQL and browser integration tests.
+GitHub Actions runs these checks and a Dash page smoke test. API regression tests use a test database adapter and cover public access, removed account endpoints, import status, origin checks, input validation, database health responses, and Dash callback forwarding. They do not replace full MySQL and browser integration tests.
 
 The production frontend output is `frontend/dist`. Deployment needs HTTPS, a reverse proxy serving the frontend and forwarding `/api` and `/dash` on one origin, a private Dash service, and configured database credentials. Vite's development proxy is not included in the built files. A production deployment is not included in this repository yet.
 
@@ -165,6 +173,6 @@ The production frontend output is `frontend/dist`. Deployment needs HTTPS, a rev
 
 Dataset identifiers and boundary-year mappings live in `backend/scripts/sync_data_gov_sg.mjs`. The source is [data.gov.sg](https://data.gov.sg/); retain source attribution when publishing derived views and review the source datasets' usage terms.
 
-The foundation refactor adds environment examples, database initialization, modular API startup, safer session handling, login throttling, cancellation of stale map requests, dependency updates, and CI. Planned improvements include import correctness, component decomposition, browser tests, accessibility, and deployment.
+The foundation refactor adds environment examples, database initialization, modular API startup, public browsing, data freshness reporting, cancellation of stale map requests, dependency updates, and CI. Planned improvements include import correctness, component decomposition, browser tests, accessibility, and deployment.
 
-**Known limitations:** the import is not atomic, role labels are not an authorization boundary, and the dashboard proxy has unresolved transitive dependency advisories. This is a portfolio project in active refactoring, not a claim of production readiness.
+**Known limitations:** the import is not atomic, and the dashboard proxy has unresolved transitive dependency advisories. This is a portfolio project in active refactoring, not a claim of production readiness.
