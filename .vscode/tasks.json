@@ -1,0 +1,48 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Explorer: database",
+      "type": "shell",
+      "command": "docker compose up -d mysql",
+      "problemMatcher": []
+    },
+    {
+      "label": "Explorer: API",
+      "type": "shell",
+      "command": "npm run dev --prefix backend",
+      "problemMatcher": [],
+      "presentation": {
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "Explorer: dashboard",
+      "type": "shell",
+      "command": ".venv/bin/python dash/app.py",
+      "problemMatcher": [],
+      "presentation": {
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "Explorer: frontend",
+      "type": "shell",
+      "command": "npm run dev --prefix frontend",
+      "problemMatcher": [],
+      "presentation": {
+        "panel": "dedicated"
+      }
+    },
+    {
+      "label": "Explorer: start app",
+      "dependsOn": [
+        "Explorer: API",
+        "Explorer: dashboard",
+        "Explorer: frontend"
+      ],
+      "dependsOrder": "parallel",
+      "problemMatcher": []
+    }
+  ]
+}
