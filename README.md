@@ -1,1 +1,170 @@
-﻿# SG_Election_App_SL
+# Singapore Election Explorer
+
+Explore Singapore's general election results through interactive constituency maps, historical comparisons, and party-level vote breakdowns.
+
+Built with **React · Leaflet · Express · MySQL · Python Dash · Plotly**. Originally developed as an academic project, now being refactored into a maintainable portfolio application.
+
+## What it does
+
+- **Explore the map:** switch between boundary years, filter by constituency type or party, and inspect constituency results.
+- **Compare elections:** search historical results by year, constituency, contesting party, and winner.
+- **Inspect the details:** view candidates, vote shares, winning margins, and elector statistics.
+- **Visualize trends:** use the Plotly dashboard for constituency wins and historical comparisons.
+- **Import public data:** load election datasets and GeoJSON boundaries from data.gov.sg into MySQL, then serve queries from the database.
+
+This is an independent historical data explorer, not an official elections service or a live results feed. Boundary datasets are configured for 2006, 2011, 2015, 2020, and 2025; results availability depends on the imported source datasets.
+
+## Screenshots
+
+> **Map screenshot placeholder** — add `docs/screenshots/map.png` showing constituency boundaries, filters, and a selected result.
+
+<!-- Uncomment after adding the image:
+![Constituency map with party filters](docs/screenshots/map.png)
+-->
+
+> **Dashboard screenshot placeholder** — add `docs/screenshots/dashboard.png` showing election comparisons and vote breakdowns.
+
+<!-- Uncomment after adding the image:
+![Election comparison dashboard](docs/screenshots/dashboard.png)
+-->
+
+## Architecture
+
+```text
+Browser → Vite / React (5173)
+              ├── /api/*  → Express (4000) → MySQL (3306)
+              └── /dash/* → Express authentication → Dash (8050)
+                                                      └── Express API → MySQL
+
+data.gov.sg → manual import script → MySQL
+```
+
+The frontend uses relative URLs. Vite proxies both the API and embedded dashboard through one browser origin. Express owns authentication and the shared database pool; Dash calls the same API using the browser's session cookie. The Python service binds to loopback and should remain private.
+
+```text
+backend/     Express app, routes, controllers, import scripts, API tests
+frontend/    React pages, authentication state, Leaflet map, styling
+dash/        Python dashboard and Plotly charts
+db/          Initial MySQL schema
+docs/        Refactoring roadmap and screenshot assets
+```
+
+## Run locally
+
+### Prerequisites
+
+- Node.js 24 (or Node.js 22.12+) and npm; `.nvmrc` selects Node.js 24.
+- Python 3.11 and `venv`.
+- Docker with Docker Compose for MySQL.
+- Internet access for dependency installation, data imports, and map tiles.
+
+### 1. Install and configure
+
+```bash
+git clone https://github.com/shannenlolol/singapore-election-explorer.git
+cd singapore-election-explorer
+# If you use nvm:
+nvm install
+nvm use
+
+npm ci --prefix backend
+npm ci --prefix frontend
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r dash/requirements.txt
+
+cp .env.example .env
+cp backend/.env.example backend/.env
+```
+
+On Windows, activate Python with `.venv\Scripts\Activate.ps1` in PowerShell instead.
+
+Edit both environment files:
+
+| File | Setting | Value |
+| --- | --- | --- |
+| `.env` | `MYSQL_ROOT_PASSWORD` | A local database root password |
+| Both files | `DB_PASSWORD` | The **same** local app database password |
+| `backend/.env` | `JWT_SECRET` | A random secret of at least 32 characters |
+| `backend/.env` | `DEMO_USERNAME`, `DEMO_PASSWORD` | Your local login; password must be at least 12 characters and at most 72 UTF-8 bytes |
+| `backend/.env` | `DGS_API_KEY` | Optional data.gov.sg API key for imports |
+
+Generate a JWT secret with:
+
+```bash
+node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"
+```
+
+Environment files are ignored by Git. The example values are placeholders; choose your own secrets.
+
+### 2. Start MySQL and import data
+
+```bash
+docker compose up -d mysql
+docker compose ps
+# Wait for MySQL to become healthy before continuing.
+npm run create-users --prefix backend
+npm run sync:data --prefix backend
+```
+
+The schema is initialized automatically on a **new** Docker volume. Importing public data can take several minutes and may be affected by upstream rate limits. The app has no bundled results; run the import before using the map or dashboard. The import rebuilds derived summary tables, so run it against your local development database.
+
+If reusing an existing volume, initialization scripts do not run again. For a database created by an older checkout, apply the additive schema without deleting its volume:
+
+```bash
+docker compose exec -T mysql sh -c 'exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD" election_db' < db/schema.sql
+```
+
+This initializes missing tables; it is not a versioned migration system and does not alter incompatible existing columns. Changing a password in `.env` does not change a user already stored in MySQL.
+
+### 3. Start the three application services
+
+Run each command from the repository root in a separate terminal:
+
+```bash
+# Terminal 1 — API
+npm run dev --prefix backend
+```
+
+```bash
+# Terminal 2 — dashboard
+source .venv/bin/activate
+python dash/app.py
+```
+
+```bash
+# Terminal 3 — frontend
+npm run dev --prefix frontend
+```
+
+Open **http://localhost:5173** and sign in with your configured demo account. Check database connectivity at **http://localhost:4000/api/health**.
+
+Stop each development server with `Ctrl+C`. `docker compose stop` stops MySQL while preserving its data.
+
+### Troubleshooting
+
+- **Login or API unavailable:** check `backend/.env`, MySQL health, and whether ports 3306/4000 are already occupied.
+- **Empty map or dashboard:** confirm the data import completed; an empty database has no results to display.
+- **Dashboard service unavailable:** start `python dash/app.py` and check port 8050. Use the frontend URL to view the embedded dashboard.
+- **Login temporarily blocked:** failed attempts are limited to 20 per IP per 15 minutes.
+
+## Development checks
+
+```bash
+npm test --prefix backend
+npm run lint --prefix frontend
+npm run build --prefix frontend
+python -m py_compile dash/app.py
+```
+
+GitHub Actions runs these checks and a Dash page smoke test. API regression tests use a test database adapter and cover sessions, authentication failures, origin checks, input validation, rate limiting, and database health responses. They do not replace full MySQL and browser integration tests.
+
+The production frontend output is `frontend/dist`. Deployment needs HTTPS, a reverse proxy serving the frontend and forwarding `/api` and `/dash` on one origin, a private Dash service, and configured database credentials. Vite's development proxy is not included in the built files. A production deployment is not included in this repository yet.
+
+## Data and project status
+
+Dataset identifiers and boundary-year mappings live in `backend/scripts/sync_data_gov_sg.mjs`. The source is [data.gov.sg](https://data.gov.sg/); retain source attribution when publishing derived views and review the source datasets' usage terms.
+
+The foundation refactor adds environment examples, database initialization, modular API startup, safer session handling, login throttling, cancellation of stale map requests, dependency updates, and CI. Planned improvements include import correctness, component decomposition, browser tests, accessibility, and deployment.
+
+**Known limitations:** the import is not atomic, role labels are not an authorization boundary, and the dashboard proxy has unresolved transitive dependency advisories. This is a portfolio project in active refactoring, not a claim of production readiness.
