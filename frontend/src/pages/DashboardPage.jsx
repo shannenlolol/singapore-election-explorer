@@ -1,7 +1,7 @@
 import React from "react";
 import { useEffect } from "react";
 
-const DASH_ORIGIN = "http://localhost:4000"; // change if needed
+const DASH_ORIGIN = window.location.origin;
 
 export default function DashboardPage() {
   const iframeRef = React.useRef(null);
@@ -12,7 +12,7 @@ export default function DashboardPage() {
       if (!e || !e.data) return;
 
       // Important: ignore messages from other iframes/windows
-      if (e.origin !== DASH_ORIGIN) return;
+      if (e.origin !== DASH_ORIGIN || e.source !== iframeRef.current?.contentWindow) return;
 
       if (e.data.type !== "DASH_HEIGHT") return;
 
@@ -42,7 +42,7 @@ export default function DashboardPage() {
         <iframe
           ref={iframeRef}
           title="Dash Dashboard"
-          src="http://localhost:4000/dash/"
+          src="/dash/"
           style={{
             width: "100%",
             height: iframeHeight,
@@ -52,13 +52,7 @@ export default function DashboardPage() {
             transition: "height 120ms ease",
           }}
 
-                  onLoad={() => {
-          // Dash might not be ready immediately; request multiple times
-          requestDashHeight();
-          setTimeout(requestDashHeight, 200);
-          setTimeout(requestDashHeight, 800);
-          setTimeout(requestDashHeight, 1500);
-        }}
+          onLoad={requestDashHeight}
           scrolling="no"
         />
       </div>

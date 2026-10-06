@@ -1,6 +1,6 @@
 import React from "react";
 import { NavLink, useNavigate } from "react-router-dom";
-import { useAuth } from "../auth/AuthContext.jsx";
+import { useAuth } from "../auth/useAuth.js";
 import { apiPost } from "../api.js";
 
 export default function NavBar() {
@@ -14,7 +14,7 @@ export default function NavBar() {
   async function onLogout() {
     try {
       await apiPost("/api/auth/logout", {});
-    } catch (_err) {
+    } catch {
       // even if server fails, proceed to clear local state
     } finally {
       setUser(null);
@@ -69,7 +69,7 @@ export default function NavBar() {
           <div className="topbar-left">
             <div className="topbar-brand">
               <div className="topbar-dot" />
-              <div className="topbar-title">SG Election App</div>
+              <div className="topbar-title">Singapore Election Explorer</div>
             </div>
           </div>
           <div className="topbar-right">
@@ -114,7 +114,7 @@ function toTitleCase(value) {
         <div className="topbar-left">
           <div className="topbar-brand">
             <img src="/icon.svg" alt="Logo" className="topbar-dot" />
-            <div className="topbar-title">SG Election App</div>
+            <div className="topbar-title">Singapore Election Explorer</div>
           </div>
 
           <nav className="topbar-nav">

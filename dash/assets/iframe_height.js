@@ -17,7 +17,7 @@
     const height = getDocHeight();
     window.parent.postMessage(
       { type: "DASH_HEIGHT", height: height },
-      "http://localhost:5173" // your React origin
+      window.location.origin
     );
   }
 
@@ -39,7 +39,7 @@
 
   // 2) Parent can request height anytime
   window.addEventListener("message", function (e) {
-    if (!e || !e.data) return;
+    if (!e || !e.data || e.origin !== window.location.origin || e.source !== window.parent) return;
     if (e.data.type === "DASH_HEIGHT_REQUEST") {
       postHeightSoon();
     }

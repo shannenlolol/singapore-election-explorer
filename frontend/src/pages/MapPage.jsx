@@ -26,7 +26,7 @@ function fitToGeo(map, geojson, leftInsetPx, transitionMs, shouldAnimate) {
 
   try {
     map.stop();
-  } catch (e) {
+  } catch {
     // ignore
   }
 
@@ -388,7 +388,7 @@ function SidebarRecenterController({
 
         try {
           bounds = L.geoJSON(geo).getBounds();
-        } catch (e) {
+        } catch {
           bounds = null;
         }
 
@@ -396,7 +396,7 @@ function SidebarRecenterController({
 
         try {
           map.invalidateSize({ animate: false, pan: false });
-        } catch (e) {
+        } catch {
           // ignore
         }
 
@@ -541,87 +541,42 @@ export default function MapPage() {
     setSearch(DEFAULT_CONSTITUENCY);
   }
 
-  async function ensureYearData(selectedYear) {
-    const y = Number(selectedYear);
-
-    setLoading(true);
-    setErrorText("");
-
-    try {
-      if (!geoByYear[y]) {
-        const res = await fetch(`/api/boundaries?year=${encodeURIComponent(y)}`, {
-          method: "GET",
-          credentials: "include",
-          headers: { Accept: "application/json" },
-        });
-
-        const text = await res.text();
-        if (!res.ok) {
-          throw new Error(`Failed to load boundaries (${res.status}): ${text.slice(0, 200)}`);
-        }
-
-        const geojson = JSON.parse(text);
-
-        setGeoByYear(function (prev) {
-          const next = { ...prev };
-          next[y] = geojson;
-          return next;
-        });
+  useEffect(() => {
+    if (!Number.isFinite(year)) return;
+    const controller = new AbortController();
+    async function loadYear() {
+      setLoading(true);
+      setErrorText("");
+      try {
+        const responses = await Promise.all([
+          fetch(`/api/boundaries?year=${year}`, { signal: controller.signal, credentials: "include" }),
+          fetch(`/api/boundaries/summary?year=${year}`, { signal: controller.signal, credentials: "include" }),
+        ]);
+        const [geojson, details] = await Promise.all(responses.map(async response => {
+          const data = await response.json();
+          if (!response.ok) throw new Error(data.message || "Could not load map data.");
+          return data;
+        }));
+        if (controller.signal.aborted) return;
+        setGeoByYear(previous => ({ ...previous, [year]: geojson }));
+        setSummaryByYear(previous => ({
+          ...previous,
+          [year]: new Map(Object.entries(details.summary || {}).map(([key, value]) => [normaliseConstituencyKey(key), value])),
+        }));
+        setPartiesByYear(previous => ({ ...previous, [year]: details.parties || [] }));
+      } catch (error) {
+        if (!controller.signal.aborted) setErrorText(error.message);
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
       }
-
-      if (!summaryByYear[y]) {
-        const res = await fetch(`/api/boundaries/summary?year=${encodeURIComponent(y)}`, {
-          method: "GET",
-          credentials: "include",
-          headers: { Accept: "application/json" },
-        });
-
-        const text = await res.text();
-        if (!res.ok) {
-          throw new Error(`Failed to load summary (${res.status}): ${text.slice(0, 200)}`);
-        }
-
-        const json = JSON.parse(text);
-        const summaryObj = json && json.summary ? json.summary : {};
-        const parties = json && Array.isArray(json.parties) ? json.parties : [];
-
-        const summaryMap = new Map(
-          Object.entries(summaryObj).map(function ([k, v]) {
-            return [normaliseConstituencyKey(k), v];
-          }),
-        );
-
-        setSummaryByYear(function (prev) {
-          const next = { ...prev };
-          next[y] = summaryMap;
-          return next;
-        });
-
-        setPartiesByYear(function (prev) {
-          const next = { ...prev };
-          next[y] = parties;
-          return next;
-        });
-      }
-    } catch (err) {
-      setErrorText(String(err && err.message ? err.message : err));
-    } finally {
-      setLoading(false);
     }
-  }
-
-  useEffect(
-    function () {
-      if (Number.isFinite(year)) {
-        ensureYearData(year);
-      }
-    },
-    [year],
-  );
+    loadYear();
+    return () => controller.abort();
+  }, [year]);
 
   const activeGeo = geoByYear[year] || null;
-  const activeSummary = summaryByYear[year] || new Map();
-  const partyOptions = partiesByYear[year] || [];
+  const activeSummary = useMemo(() => summaryByYear[year] || new Map(), [summaryByYear, year]);
+  const partyOptions = useMemo(() => partiesByYear[year] || [], [partiesByYear, year]);
 
   const legendParties = useMemo(
     function () {
@@ -832,7 +787,7 @@ export default function MapPage() {
 
       try {
         mapInstance.invalidateSize({ animate: false, pan: false });
-      } catch (e) {
+      } catch {
         // ignore
       }
 

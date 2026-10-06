@@ -1,7 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { apiPost, apiGet } from "../api.js";
-import { useAuth } from "../auth/AuthContext.jsx";
+import { useAuth } from "../auth/useAuth.js";
 import { Eye, EyeOff } from "lucide-react";
 
 export default function LoginPage() {
@@ -55,7 +55,7 @@ function parseApiError(err) {
         message = obj.error;
       }
     }
-  } catch (_e) {
+  } catch {
     // keep raw
   }
 

@@ -1,7 +1,7 @@
 import React from "react";
 import { apiGet } from "../api.js";
 
-const AuthContext = React.createContext(null);
+import { AuthContext } from "./context.js";
 
 export function AuthProvider({ children }) {
   const [user, setUser] = React.useState(null);
@@ -16,7 +16,7 @@ export function AuthProvider({ children }) {
         if (!cancelled) {
           setUser(data.user);
         }
-      } catch (_err) {
+      } catch {
         if (!cancelled) {
           setUser(null);
         }
@@ -43,12 +43,4 @@ export function AuthProvider({ children }) {
       {children}
     </AuthContext.Provider>
   );
-}
-
-export function useAuth() {
-  const ctx = React.useContext(AuthContext);
-  if (!ctx) {
-    throw new Error("useAuth must be used inside AuthProvider");
-  }
-  return ctx;
 }

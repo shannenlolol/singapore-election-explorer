@@ -1,5 +1,5 @@
 {
-  "name": "frontend",
+  "name": "@singapore-election-explorer/frontend",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -28,5 +28,8 @@
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
     "vite": "^7.2.4"
+  },
+  "engines": {
+    "node": ">=22.12.0"
   }
 }

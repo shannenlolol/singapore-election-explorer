@@ -4,7 +4,6 @@ from flask import request
 import os
 import requests
 import plotly.graph_objects as go
-from dash import callback_context
 from dash.exceptions import PreventUpdate
 import html as pyhtml
 
@@ -249,10 +248,6 @@ def backend_get_json(path, params=None):
     url = f"{BACKEND_BASE}{path}"
     incoming_cookies = dict(request.cookies)
 
-    print("\n=== [backend_get_json] ===")
-    print("url:", url)
-    print("params:", params)
-    print("incoming cookie keys:", list(incoming_cookies.keys()))
 
     r = requests.get(
         url,
@@ -266,8 +261,6 @@ def backend_get_json(path, params=None):
         timeout=20,
     )
 
-    print("status:", r.status_code)
-    print("text head:", (r.text or "")[:300])
 
     r.raise_for_status()
     return r.json()
@@ -519,7 +512,7 @@ def add_headers(resp):
     resp.headers["Expires"] = "0"
 
     resp.headers["Content-Security-Policy"] = (
-        "frame-ancestors http://localhost:5173 http://127.0.0.1:5173"
+        "frame-ancestors 'self'"
     )
     if "X-Frame-Options" in resp.headers:
         del resp.headers["X-Frame-Options"]
@@ -1060,7 +1053,6 @@ def boot_load_options(_n):
     Input("btn-reset-filters", "n_clicks"),
 )
 def init_filters(options_data, _reset_clicks):
-    print("!!!!!!!!options_data keys:", list((options_data or {}).keys()), flush=True)
 
     if not options_data:
         return [], [], [], [], [], [], [], []
