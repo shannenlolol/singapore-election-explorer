@@ -9,7 +9,7 @@ Built with **React · Leaflet · Express · MySQL**. The legacy Python Dash/Plot
 - **Explore the map:** switch between boundary years, filter by constituency type or party, and inspect constituency results.
 - **Compare elections:** search historical results by year, constituency, contesting party, and winner.
 - **Inspect the details:** view candidates, vote shares, winning margins, and elector statistics.
-- **Visualize trends:** use the Plotly dashboard for constituency wins and historical comparisons.
+- **Visualize trends:** use React charts and reference tables for constituency wins and historical comparisons.
 - **Import public data:** load election datasets and GeoJSON boundaries from data.gov.sg into MySQL, then serve queries from the database.
 
 This is an independent historical data explorer, not an official elections service or a live results feed. Boundary datasets are configured for 2006, 2011, 2015, 2020, and 2025; results availability depends on the imported source datasets.
@@ -154,6 +154,25 @@ Refresh is a maintainer operation: run `npm run sync:data --prefix backend`. The
 
 The header links to data.gov.sg and shows **Data last updated**, meaning the last completed local import, in Singapore time. It is not the publisher's update date. A fresh or older database without an import record shows no completed import; running and failed imports are explicitly indicated. Since the importer is not yet atomic, a failed import may leave partial data even when an older successful timestamp exists. Status is checked once a minute.
 
+### Correcting existing derived results
+
+After updating from an older checkout, recalculate summaries without downloading data:
+
+```bash
+npm run rebuild:summary --prefix backend
+```
+
+This corrects historical independent-candidate rankings and turnout calculations. Both derived tables are replaced in one transaction; a failure preserves the previous summaries. Source records are unchanged, and this local recalculation does not advance the last-import timestamp. Future imports use the same calculations automatically. Stop any concurrent import before rebuilding.
+
+### Calculation and coverage rules
+
+- Each source row is one contestant: an individual candidate or a whole GRC team. Winners and margins compare contestants, so separate independents are never added together to determine a winner.
+- Margin is the difference between the top two contestants divided by total valid votes, expressed in percentage points. Details expose fractional vote shares; the UI displays percentages. Map party shares are grouped, but its winner and shading use the winning contestant.
+- Turnout is `(valid votes + rejected votes) / registered electors × 100`. Spoilt papers are cancelled/replaced and excluded, consistent with [ELD’s polling explanation](https://www.eld.gov.sg/candidate_parliamentary_polling.html). Missing inputs produce unavailable turnout.
+- A sole contestant with no vote total is treated as an uncontested return, following the historical source convention. Vote shares, margin, and turnout remain unavailable. Tied totals do not imply a winner; incomplete totals do not imply zero votes.
+- The [results dataset](https://data.gov.sg/datasets/d_581a30bee57fa7d8383d6bc94739ad00/view) inspected on 7 October 2026 contains 753 constituency/year records, including only 33 for 2025: it omits the Marine Parade walkover. The app does not invent missing records. Charts count available constituencies, **not seats or a complete official tally**.
+- Search currently returns at most 800 results; Search and Summary warn when that limit is reached. Server pagination and complete import publication remain follow-up work.
+
 ## Start from VS Code
 
 Open this folder in VS Code. Use **Terminal → Run Task → Explorer: database**, wait for MySQL to become healthy, then run **Explorer: start app** to launch the API, dashboard, and frontend in dedicated terminals. Install dependencies and configure the environment first using the instructions above. Stop any existing servers on ports 4000, 8050, and 5173 before starting another copy. The Python task uses the macOS/Linux `.venv/bin/python` path.
@@ -170,7 +189,19 @@ python -m py_compile dash/app.py
 python -m unittest discover -s dash -p 'test_*.py'
 ```
 
-GitHub Actions runs these checks, a Dash page smoke test, and a cross-language chart-count comparison against legacy Dash using fixtures. Frontend tests use Node’s test runner, React Testing Library, and jsdom to validate query formatting, multi-select filters, pagination, sorting, details, retries, cancellation, stale-response handling, Summary aggregations, reference tables, and incomplete-data warnings without browser automation. API regression tests use a test database adapter and cover public access, removed account endpoints, import status, origin checks, input validation, database health responses, and Dash callback forwarding. They do not replace full MySQL integration tests or a source-data correctness audit.
+GitHub Actions runs these checks, a Dash page smoke test, and a cross-language chart-count comparison against legacy Dash using fixtures. Frontend tests use Node’s test runner, React Testing Library, and jsdom to validate query formatting, multi-select filters, pagination, sorting, details, retries, cancellation, stale-response handling, Summary aggregations, reference tables, and incomplete-data warnings without browser automation. API regression tests use a test database adapter and cover public access, removed account endpoints, import status, origin checks, input validation, database health responses, and Dash callback forwarding. Source-derived fixtures cover historical independents, SMC/GRC contests, multi-party margins, and walkovers; synthetic fixtures cover ties and missing votes. MySQL integration tests exercise actual filters, agreement across APIs, date handling, and rollback after a forced rebuild failure. CI runs these against MySQL 8.4.
+
+To run integration tests locally, start an isolated test database (these sample credentials are disposable test values):
+
+```bash
+docker run -d --rm --name election-parity-test \
+  -e MYSQL_ROOT_PASSWORD=fixture-only -p 127.0.0.1:3307:3306 mysql:8.4
+# Wait until MySQL is ready, then:
+TEST_DB_PORT=3307 TEST_DB_PASSWORD=fixture-only npm run test:integration --prefix backend
+docker stop election-parity-test
+```
+
+The suite creates and drops its own uniquely named database and requires CREATE DATABASE privileges. Never point it at a production server.
 
 The production frontend output is `frontend/dist`. Deployment needs HTTPS, a reverse proxy serving the frontend and forwarding `/api` on one origin, and configured database credentials. Vite's development proxy is not included in the built files. If retaining the legacy dashboard, also proxy `/dash` to a private Python service. A production deployment is not included in this repository yet.
 
@@ -178,6 +209,6 @@ The production frontend output is `frontend/dist`. Deployment needs HTTPS, a rev
 
 Dataset identifiers and boundary-year mappings live in `backend/scripts/sync_data_gov_sg.mjs`. The source is [data.gov.sg](https://data.gov.sg/); retain source attribution when publishing derived views and review the source datasets' usage terms.
 
-The foundation refactor adds environment examples, database initialization, modular API startup, public browsing, data freshness reporting, cancellation of stale map requests, dependency updates, and CI. Planned improvements include import correctness, component decomposition, browser tests, accessibility, and deployment.
+The foundation refactor adds environment examples, database initialization, modular API startup, public browsing, data freshness reporting, cancellation of stale map requests, dependency updates, and CI. Next steps are removing the legacy Dash service and containerizing the frontend, API, and database. Further improvements include atomic imports, server pagination, map component decomposition, accessibility, and deployment.
 
 **Known limitations:** the import is not atomic, and the dashboard proxy has unresolved transitive dependency advisories. This is a portfolio project in active refactoring, not a claim of production readiness.
