@@ -28,7 +28,7 @@ export default function ResultsTable({ rows, selected, onSelect, partyNames }) {
           <td>{row.constituency_type || "—"}</td>
           <td>{splitParties(row.contesting_parties).map(party => <span className="search-party" style={{ "--party-color": partyColor(party) }} title={partyNames[party]} key={party}>{party}</span>)}</td>
           <td><span className="search-party" style={{ "--party-color": partyColor(row.winner_party) }} title={partyNames[row.winner_party]}>{row.winner_party || "—"}</span></td>
-          <td>{formatPercent(row.margin_pct)}</td>
+          <td>{row.outcome === "walkover" ? "Walkover" : row.outcome === "tie" ? "Tie" : formatPercent(row.margin_pct)}</td>
         </tr>)}</tbody>
       </table>
     </div>

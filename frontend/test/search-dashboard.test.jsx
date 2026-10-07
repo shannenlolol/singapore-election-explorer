@@ -125,3 +125,31 @@ test('options failure is recoverable and does not trigger a search prematurely',
   await user.click(screen.getByRole('button', { name: 'Retry filters' }));
   await screen.findByRole('button', { name: 'View Aljunied 2025 details' });
 });
+
+test('detail panel distinguishes independent contestants and explains walkovers and ties', async () => {
+  const user = userEvent.setup();
+  const original = structuredClone(details);
+  try {
+    details.parties = [
+      { party: 'Independent', candidates: 'Candidate One', vote_count: 40, vote_share: 0.4 },
+      { party: 'Independent', candidates: 'Candidate Two', vote_count: 30, vote_share: 0.3 },
+    ];
+    details.outcome = 'tie';
+    render(<SearchDashboard />);
+    await user.click(await screen.findByRole('button', { name: 'View Aljunied 2025 details' }));
+    await screen.findByText('Tied vote totals: no winner is inferred.');
+    const votes = document.querySelector('.vote-bars');
+    assert.ok(within(votes).getByText('Candidate One'));
+    assert.ok(within(votes).getByText('Candidate Two'));
+    cleanup();
+    details.outcome = 'walkover';
+    details.parties = [{ party: 'PAP', candidates: 'Team', vote_count: null, vote_share: null }];
+    render(<SearchDashboard />);
+    await user.click(await screen.findByRole('button', { name: 'View Aljunied 2025 details' }));
+    await screen.findByText(/Uncontested return \(walkover\)/);
+    assert.ok(screen.getByText('— votes · —'));
+  } finally {
+    for (const key of Object.keys(details)) delete details[key];
+    Object.assign(details, original);
+  }
+});

@@ -2,6 +2,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { MapContainer, TileLayer, GeoJSON, useMap } from "react-leaflet";
 import L from "leaflet";
+import { getWinnerPct, formatVotePct } from "../features/map/resultModel.js";
 
 function upperTrim(value) {
   return String(value || "").trim().toUpperCase();
@@ -70,7 +71,7 @@ function clamp01(x) {
 function opacityFromWinnerPct(winnerPct) {
   const pct = Number(winnerPct);
 
-  if (!Number.isFinite(pct)) {
+  if (winnerPct == null || !Number.isFinite(pct)) {
     return 0.25;
   }
 
@@ -92,22 +93,6 @@ function opacityFromWinnerPct(winnerPct) {
   return MIN_O + (MAX_O - MIN_O) * eased;
 }
 
-
-function getWinnerPct(entry) {
-  if (!entry) return null;
-
-  if (Number.isFinite(Number(entry.winnerVotePct))) {
-    return Number(entry.winnerVotePct);
-  }
-
-  const winner = upperTrim(entry.winnerParty);
-  if (!winner) return null;
-
-  const node = entry.parties && entry.parties[winner];
-  const pct = node ? Number(node.votePct) : null;
-
-  return Number.isFinite(pct) ? pct : null;
-}
 
 // Party colours
 const PARTY_META = {
@@ -838,7 +823,7 @@ export default function MapPage() {
         const baseStroke = winner ? colourForParty(winner) : "#ffffff";
 
         const winnerPct = getWinnerPct(entry);
-        const fillOpacity = Number.isFinite(Number(winnerPct))
+        const fillOpacity = winnerPct != null && Number.isFinite(Number(winnerPct))
           ? opacityFromWinnerPct(winnerPct)
           : 0.25;
 
@@ -877,8 +862,7 @@ export default function MapPage() {
 
       partyLinesHtml = parties
         .map(function (p) {
-          const pctVal = Number(entry.parties[p]?.votePct);
-          const pctText = Number.isFinite(pctVal) ? `${pctVal.toFixed(2)}%` : "";
+          const pctText = formatVotePct(entry.parties[p]?.votePct);
           return `<div style="font-size:12px; margin-top:2px;"><b>${pctText}</b> ${p}</div>`;
         })
         .join("");

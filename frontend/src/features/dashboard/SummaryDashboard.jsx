@@ -11,7 +11,7 @@ export default function SummaryDashboard() {
   const options = useResource("/api/dashboard/options");
   const summary = useMemo(() => summarizeResults(results.data?.rows || []), [results.data]);
   return <section aria-label="Election summary">
-    <div className="search-panel-heading"><div><span className="eyebrow">The bigger picture</span><h2>Every election. A wider perspective.</h2><p className="search-muted">Explore historical constituency wins and the people’s political choices over time.</p></div></div>
+    <div className="search-panel-heading"><div><span className="eyebrow">The bigger picture</span><h2>Election history. A wider perspective.</h2><p className="search-muted">Explore recorded constituency wins over time. Counts reflect available source records, not parliamentary seats or a complete election tally.</p></div></div>
     {results.loading && <div className="summary-card" role="status">Loading election summary…</div>}
     {results.error && <div className="summary-card" role="alert"><h3>Summary unavailable</h3><p>{results.error}</p><button onClick={results.retry}>Retry summary</button></div>}
     {results.data && (summary.total ? <>
