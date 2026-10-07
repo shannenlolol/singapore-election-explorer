@@ -1,0 +1,48 @@
+.dashboard-page { max-width: 1600px; margin: auto; color: var(--text); }
+.dashboard-page button { color: inherit; background: var(--surface-2); border: 1px solid var(--border); padding: 9px 12px; cursor: pointer; }
+.dashboard-page button:disabled { opacity: .45; cursor: default; }
+.dashboard-page :focus-visible { outline: 2px solid var(--c-cyan); outline-offset: 3px; }
+.dashboard-views { display: flex; gap: 8px; margin-bottom: 24px; }
+.dashboard-views [aria-pressed="true"] { border-color: var(--c-cyan); background: #143544; }
+.dashboard-page h1 { font-size: clamp(21px, 3vw, 28px); margin: 0 0 8px; }
+.dashboard-page h2 { font-size: 20px; margin: 0; }
+.dashboard-page h3 { font-size: 16px; margin: 24px 0 12px; }
+.search-muted { color: var(--muted); font-size: 14px; line-height: 1.5; }
+.search-panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+.search-filters { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; align-items: start; }
+.search-filter { border: 1px solid var(--border); border-radius: 12px; background: #17202d; }
+.search-filter summary { cursor: pointer; padding: 12px; font-size: 14px; }
+.search-filter summary span { display: block; color: var(--muted); margin-top: 6px; }
+.search-filter-menu { padding: 12px; border-top: 1px solid var(--border); }
+.search-filter-menu > label { display: block; font-size: 12px; margin-bottom: 8px; }
+.search-filter input[type="search"] { width: 100%; padding: 8px; box-sizing: border-box; margin-bottom: 8px; }
+.search-filter fieldset { border: 0; padding: 0; margin: 10px 0 0; max-height: 220px; overflow-y: auto; }
+.search-filter legend { font-size: 12px; color: var(--muted); }
+.search-choice { display: flex; gap: 8px; align-items: flex-start; padding: 8px 0; font-size: 13px; cursor: pointer; overflow-wrap: anywhere; }
+.search-choice input { flex: 0 0 auto; width: auto; margin-top: 2px; accent-color: var(--c-cyan); }
+.search-content { display: grid; gap: 18px; grid-template-columns: minmax(0, 1fr); align-items: start; }
+.search-content.has-details { grid-template-columns: minmax(0, 1.5fr) minmax(300px, 1fr); }
+.search-results, .search-details { min-width: 0; padding: 18px; }
+.results-scroll { overflow-x: auto; }
+.results-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.results-table caption { text-align: left; padding: 0 0 14px; color: var(--muted); font-size: 13px; }
+.results-table th { text-align: left; }
+.results-table th button { border: 0; padding: 8px 4px; background: transparent; white-space: nowrap; }
+.results-table td { padding: 12px 6px; border-top: 1px solid var(--border); font-variant-numeric: tabular-nums; }
+.results-table td:last-child { white-space: nowrap; }
+.results-table .constituency-link { text-align: left; background: transparent; border: 0; padding: 0; color: #8bdcf7; text-decoration: underline; }
+.results-table .is-selected { background: #143544; }
+.search-party { display: inline-block; margin: 2px 4px 2px 0; padding: 3px 6px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; font-size: 12px; }
+.results-pagination { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 16px; }
+.search-details h2 small { display: block; color: var(--muted); margin-top: 6px; }
+.vote-bars { padding: 0; list-style: none; }
+.vote-bars li { margin-bottom: 18px; }
+.vote-bars li > div:first-child { display: flex; justify-content: space-between; gap: 10px; font-size: 13px; }
+.vote-track { height: 10px; border-radius: 6px; background: var(--surface-2); margin-top: 8px; overflow: hidden; }
+.vote-track > div { height: 100%; background: var(--c-cyan); border-radius: 6px; }
+.elector-stats > div { display: flex; justify-content: space-between; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+.elector-stats dd { margin: 0; font-variant-numeric: tabular-nums; }
+.candidate-group h4 { font-size: 14px; margin-bottom: 6px; }
+.candidate-group li { font-size: 14px; line-height: 1.8; }
+@media (max-width: 1100px) { .search-content.has-details { grid-template-columns: minmax(0, 1fr); } .search-filters { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 650px) { .search-filters { grid-template-columns: minmax(0, 1fr); } .search-panel-heading { align-items: flex-start; } .search-panel-heading > button { flex-shrink: 0; } .search-results, .search-details { padding: 12px; } }

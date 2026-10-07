@@ -4,4 +4,4 @@ async function request(path, options = {}) {
   if (!response.ok) throw new Error(data?.message || `Request failed (${response.status}).`);
   return data;
 }
-export const apiGet = path => request(path);
+export const apiGet = (path, options) => request(path, options);

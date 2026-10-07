@@ -1,6 +1,7 @@
 from dash import Dash, html, dcc, dash_table, callback_context, no_update
 from dash.dependencies import Input, Output, State
 import os
+from urllib.parse import parse_qs
 import requests
 import plotly.graph_objects as go
 from dash.exceptions import PreventUpdate
@@ -844,6 +845,7 @@ def render_summary_tab():
 # ----------------------------
 app.layout = html.Div(
     [
+        dcc.Location(id="dashboard-location", refresh=False),
         dcc.Interval(id="boot", interval=80, n_intervals=0, max_intervals=1),
 
         html.Div(id="data-warning", className="alert", style={"display": "none"}),
@@ -866,6 +868,12 @@ app.layout = html.Div(
     className="page",
 )
 
+
+
+@app.callback(Output("tabs", "value"), Input("dashboard-location", "search"))
+def select_initial_view(search):
+    view = parse_qs((search or "").lstrip("?")).get("view", ["search"])[0]
+    return "tab-summary" if view == "summary" else "tab-search"
 
 
 app.validation_layout = html.Div(
