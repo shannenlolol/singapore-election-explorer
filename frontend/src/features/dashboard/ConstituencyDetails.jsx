@@ -1,5 +1,6 @@
 import React from "react";
 import { useEffect, useRef } from "react";
+import { partyColor } from "./summaryModel.js";
 import { useResource } from "./useResource.js";
 import { formatNumber, formatPercent, splitCandidates } from "./model.js";
 
@@ -23,7 +24,7 @@ export default function ConstituencyDetails({ selected, onClose, partyNames }) {
         {!parties.length && <p>No party results available.</p>}
         <ul className="vote-bars">{parties.map(party => <li key={party.party}>
           <div><strong title={party.party_full_name || partyNames[party.party]}>{party.party}</strong><span>{formatNumber(party.vote_count)} votes · {formatPercent(party.vote_share, 2, 100)}</span></div>
-          <div className="vote-track" aria-hidden="true"><div style={{ width: `${Math.max(0, Number(party.vote_count) || 0) / maxVotes * 100}%` }} /></div>
+          <div className="vote-track" aria-hidden="true"><div style={{ background: partyColor(party.party), width: `${Math.max(0, Number(party.vote_count) || 0) / maxVotes * 100}%` }} /></div>
         </li>)}</ul>
         <h3>Elector statistics</h3>
         {data.elector ? <dl className="elector-stats">{[

@@ -1,0 +1,16 @@
+/* Shared navigation, deliberately separate from the map's own controls. */
+.app-shell { background: #f4f6f9; }
+.app-content { padding: 20px 32px; }
+.topbar { background: #ffffffed; border-bottom: 1px solid #e3e8ef; box-shadow: none; z-index: 50; }
+.topbar-inner { max-width: 1504px; min-height: 82px; padding: 16px 32px; gap: 12px 32px; }
+.topbar-left { gap: 36px; }
+.topbar-brand { gap: 10px; }
+.topbar-title { color: #24364d; font-size: 14px; font-weight: 700; letter-spacing: -.02em; }
+.topbar-dot { width: 28px; height: 28px; box-shadow: none; }
+.topbar-link { color: #6a788c; background: transparent; border: 1px solid transparent; border-radius: 8px; font-size: 13px; padding: 9px 13px; }
+.topbar-link:hover { color: #26496f; background: #f2f5f9; text-decoration: none; }
+.topbar-link.is-active { color: #245b9e; background: #edf3fb; border-color: #e1eaf6; box-shadow: none; }
+.data-status { color: #7b8797; font-size: 10px; line-height: 1.6; text-align: right; gap: 1px; }
+.data-status a { color: #4b6e98; }
+@media (max-width: 850px) { .topbar-inner { padding: 14px 20px; } .topbar-left { width: 100%; justify-content: space-between; gap: 16px; } .data-status { text-align: left; } .app-content { padding: 16px 20px; } }
+@media (max-width: 500px) { .topbar-left { flex-wrap: wrap; } .topbar-title { font-size: 13px; } .topbar-inner { padding: 12px 16px; } .app-content { padding: 12px 14px; } }

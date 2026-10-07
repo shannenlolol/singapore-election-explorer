@@ -29,7 +29,7 @@ export default function SearchDashboard() {
   function updateFilter(key, values) { setFilters(previous => ({ ...previous, [key]: values })); setSelected(null); }
   const rows = results.data?.rows || [];
   return <section aria-label="Search election results">
-    <div className="search-panel-heading"><div><h1>Explore election results</h1><p className="search-muted">Compare constituencies, parties, and election years.</p></div>
+    <div className="search-panel-heading"><div><span className="eyebrow">Find your constituency</span><h2>Explore election results</h2><p className="search-muted">Compare constituencies, parties, and election years.</p></div>
       <button onClick={() => { setFilters(emptyFilters()); setSelected(null); }}>Reset filters</button>
     </div>
     {options.loading && <p role="status">Loading search filters…</p>}
