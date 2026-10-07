@@ -1,3 +1,4 @@
+const { analyseContest } = require("../domain/electionResults");
 
 function splitCsvParam(value) {
   const s = String(value || "").trim();
@@ -38,11 +39,13 @@ async function getDashboardOptions(req, res, next) {
     `);
 
     const [partyRows] = await pool.query(`
-      SELECT
-        abbreviation,
-        political_party AS full_name
-      FROM political_parties
-      ORDER BY abbreviation ASC
+      SELECT labels.abbreviation, p.political_party AS full_name
+      FROM (
+        SELECT abbreviation FROM political_parties
+        UNION SELECT party AS abbreviation FROM ge_candidate_results
+      ) labels
+      LEFT JOIN political_parties p ON p.abbreviation = labels.abbreviation
+      ORDER BY labels.abbreviation ASC
     `);
 
     const [constRows] = await pool.query(`
@@ -110,12 +113,19 @@ async function searchDashboardRows(req, res, next) {
     s.winner_party,
     s.margin_pct,
     s.turnout_pct,
-    cp.contesting_parties
+    cp.contesting_parties,
+    CASE
+      WHEN cp.contestants = 1 AND cp.recorded_votes = 0 THEN 'walkover'
+      WHEN s.winner_party IS NULL AND s.margin_pct = 0 THEN 'tie'
+      WHEN s.winner_party IS NOT NULL THEN 'contested'
+      ELSE 'unavailable'
+    END AS outcome
   FROM ge_summary s
   LEFT JOIN (
     SELECT
       r.year,
       r.constituency,
+      COUNT(*) AS contestants, COUNT(r.vote_count) AS recorded_votes,
       GROUP_CONCAT(DISTINCT r.party ORDER BY r.party SEPARATOR ',') AS contesting_parties
     FROM ge_candidate_results r
     GROUP BY r.year, r.constituency
@@ -178,7 +188,7 @@ async function searchDashboardRows(req, res, next) {
           margin_pct: r.margin_pct === null ? null : Number(r.margin_pct),
           turnout_pct: r.turnout_pct === null ? null : Number(r.turnout_pct),
 
-          // NEW
+          outcome: r.outcome,
           contesting_parties: r.contesting_parties || "",
         };
       }),
@@ -212,31 +222,9 @@ async function getDashboardDetails(req, res, next) {
       partyNameMap[String(r.abbreviation)] = r.full_name;
     }
 
-    // Party vote breakdown + candidates (party-level aggregate)
     const [partyRows] = await pool.execute(
-      `
-      SELECT
-        t.party,
-        t.vote_count,
-        CASE
-          WHEN SUM(t.vote_count) OVER (PARTITION BY t.year, t.constituency) = 0 THEN NULL
-          ELSE t.vote_count / SUM(t.vote_count) OVER (PARTITION BY t.year, t.constituency)
-        END AS vote_share,
-        t.candidates
-      FROM (
-        SELECT
-          r.year,
-          r.constituency,
-          r.party,
-          SUM(COALESCE(r.vote_count, 0)) AS vote_count,
-          GROUP_CONCAT(DISTINCT r.candidates ORDER BY r.candidates SEPARATOR "; ") AS candidates
-        FROM ge_candidate_results r
-        WHERE r.year = ?
-          AND r.constituency = ?
-        GROUP BY r.year, r.constituency, r.party
-      ) t
-      ORDER BY t.vote_count DESC
-      `,
+      `SELECT party, candidates, vote_count FROM ge_candidate_results
+       WHERE year = ? AND constituency = ?`,
       [year, constituency],
     );
 
@@ -257,10 +245,15 @@ async function getDashboardDetails(req, res, next) {
       [year, constituency],
     );
 
+    const result = analyseContest(partyRows, electorRows[0]);
     res.json({
       year,
       constituency,
-      parties: partyRows.map(function (r) {
+      outcome: result.outcome,
+      winner_party: result.winner_party,
+      margin_pct: result.margin_pct,
+      turnout_pct: result.turnout_pct,
+      parties: result.contestants.map(function (r) {
         return {
           party: r.party,
           party_full_name: partyNameMap[String(r.party)] || null,

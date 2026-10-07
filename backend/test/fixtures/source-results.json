@@ -1,0 +1,206 @@
+{
+  "source": "https://data.gov.sg/datasets/d_581a30bee57fa7d8383d6bc94739ad00/view",
+  "retrieved": "2026-10-07",
+  "records": [
+    {
+      "_id": 121,
+      "year": "1959",
+      "constituency": "Farrer Park",
+      "constituency_type": "na",
+      "candidates": "A. P. Rajah",
+      "party": "Independent",
+      "vote_count": "4077",
+      "vote_percentage": "0.4452"
+    },
+    {
+      "_id": 122,
+      "year": "1959",
+      "constituency": "Farrer Park",
+      "constituency_type": "na",
+      "candidates": "Chan Kooi Chew",
+      "party": "Independent",
+      "vote_count": "311",
+      "vote_percentage": "0.034"
+    },
+    {
+      "_id": 123,
+      "year": "1959",
+      "constituency": "Farrer Park",
+      "constituency_type": "na",
+      "candidates": "Joseph A.",
+      "party": "Independent",
+      "vote_count": "147",
+      "vote_percentage": "0.0161"
+    },
+    {
+      "_id": 124,
+      "year": "1959",
+      "constituency": "Farrer Park",
+      "constituency_type": "na",
+      "candidates": "Soo-Tho Sin Hee",
+      "party": "Independent",
+      "vote_count": "789",
+      "vote_percentage": "0.0862"
+    },
+    {
+      "_id": 125,
+      "year": "1959",
+      "constituency": "Farrer Park",
+      "constituency_type": "na",
+      "candidates": "Tan Teck Ngiap alias Chen Ta-Ren",
+      "party": "PAP",
+      "vote_count": "3832",
+      "vote_percentage": "0.4185"
+    },
+    {
+      "_id": 220,
+      "year": "1959",
+      "constituency": "Siglap",
+      "constituency_type": "na",
+      "candidates": "Koh Tee Kin",
+      "party": "Independent",
+      "vote_count": "3408",
+      "vote_percentage": "0.2656"
+    },
+    {
+      "_id": 221,
+      "year": "1959",
+      "constituency": "Siglap",
+      "constituency_type": "na",
+      "candidates": "Pang Toon Tin",
+      "party": "PRSSD",
+      "vote_count": "587",
+      "vote_percentage": "0.0457"
+    },
+    {
+      "_id": 222,
+      "year": "1959",
+      "constituency": "Siglap",
+      "constituency_type": "na",
+      "candidates": "Sahorah bte Ahmat",
+      "party": "PAP",
+      "vote_count": "4407",
+      "vote_percentage": "0.3434"
+    },
+    {
+      "_id": 223,
+      "year": "1959",
+      "constituency": "Siglap",
+      "constituency_type": "na",
+      "candidates": "A. Wanjor",
+      "party": "PMIP",
+      "vote_count": "234",
+      "vote_percentage": "0.0183"
+    },
+    {
+      "_id": 224,
+      "year": "1959",
+      "constituency": "Siglap",
+      "constituency_type": "na",
+      "candidates": "John Snodgrass",
+      "party": "LSP",
+      "vote_count": "1511",
+      "vote_percentage": "0.1178"
+    },
+    {
+      "_id": 225,
+      "year": "1959",
+      "constituency": "Siglap",
+      "constituency_type": "na",
+      "candidates": "Abdullah Masood",
+      "party": "Independent",
+      "vote_count": "1267",
+      "vote_percentage": "0.0987"
+    },
+    {
+      "_id": 226,
+      "year": "1959",
+      "constituency": "Siglap",
+      "constituency_type": "na",
+      "candidates": "Mohd. Sidik bin Hj. Abd. Hamid",
+      "party": "PKMS",
+      "vote_count": "1418",
+      "vote_percentage": "0.1105"
+    },
+    {
+      "_id": 1408,
+      "year": "2011",
+      "constituency": "Tanjong Pagar",
+      "constituency_type": "GRC",
+      "candidates": "Chan Chun Sing | Chia Shi-Lu | Indranee Thurai Rajah | Lee Kuan Yew | Lily Tirtasana Neo",
+      "party": "PAP",
+      "vote_count": "na",
+      "vote_percentage": "na"
+    },
+    {
+      "_id": 1540,
+      "year": "2025",
+      "constituency": "Aljunied",
+      "constituency_type": "GRC",
+      "candidates": "Ang Zi Yang, Adrian | Chan Hui Yuh | Faisal Abdul Aziz | Jagathishwaran Rajo | Liu Keyuan, Daniel",
+      "party": "PAP",
+      "vote_count": "53471",
+      "vote_percentage": "0.4029"
+    },
+    {
+      "_id": 1541,
+      "year": "2025",
+      "constituency": "Aljunied",
+      "constituency_type": "GRC",
+      "candidates": "Fadli Fawzi | Gerald Giam Yean Song | Sylvia Lim Swee Lian  | Pritam Singh | Kenneth Tiong Boon Kiat",
+      "party": "WP",
+      "vote_count": "79254",
+      "vote_percentage": "0.5971"
+    },
+    {
+      "_id": 1542,
+      "year": "2025",
+      "constituency": "Ang Mo Kio",
+      "constituency_type": "GRC",
+      "candidates": "Darryl David | Jasmin Lau | Lee Hsien Loong | Victor Lye | Nadia Ahmad Samdin",
+      "party": "PAP",
+      "vote_count": "115562",
+      "vote_percentage": "0.7895"
+    },
+    {
+      "_id": 1543,
+      "year": "2025",
+      "constituency": "Ang Mo Kio",
+      "constituency_type": "GRC",
+      "candidates": "Heng Zheng Dao | Ho Yuen Liung Martinn | Lee Yuru, Samuel | Lim Lian Chin | Thaddeus Shamraj S/O Thomas Selvaraj",
+      "party": "PPP",
+      "vote_count": "14929",
+      "vote_percentage": "0.102"
+    },
+    {
+      "_id": 1544,
+      "year": "2025",
+      "constituency": "Ang Mo Kio",
+      "constituency_type": "GRC",
+      "candidates": "Vincent Ng Kian Guan | Nigel Ng | Noraini Yunus | Ridhuan Chandran | Zhu Laicheng",
+      "party": "SUP",
+      "vote_count": "15874",
+      "vote_percentage": "0.1085"
+    },
+    {
+      "_id": 1557,
+      "year": "2025",
+      "constituency": "Hougang",
+      "constituency_type": "SMC",
+      "candidates": "Marshall Lim Yu Hui",
+      "party": "PAP",
+      "vote_count": "10327",
+      "vote_percentage": "0.3785"
+    },
+    {
+      "_id": 1558,
+      "year": "2025",
+      "constituency": "Hougang",
+      "constituency_type": "SMC",
+      "candidates": "Dennis Tan Lip Fong",
+      "party": "WP",
+      "vote_count": "16956",
+      "vote_percentage": "0.6215"
+    }
+  ]
+}

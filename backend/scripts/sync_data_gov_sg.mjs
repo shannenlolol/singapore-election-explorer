@@ -1,5 +1,7 @@
 import "../config.js";
 import mysql from "mysql2/promise";
+import calculations from "../domain/electionResults.js";
+import summaries from "../services/rebuildSummaries.js";
 
 // 1. List of Political Parties
 const DATASET_PARTIES = "d_ef163fd9ebc3c2f21032c29da3bd3f77";
@@ -134,18 +136,11 @@ async function fetchAllRows(datasetId) {
 
 
 function toInt(v) {
-  if (v === null || v === undefined) return null;
-  const n = Number(String(v).trim());
-  if (!Number.isFinite(n)) return null;
-  return Math.trunc(n);
+  const number = calculations.optionalNumber(v);
+  return number !== null && Number.isSafeInteger(number) ? number : null;
 }
 
-function toFloat(v) {
-  if (v === null || v === undefined) return null;
-  const n = Number(String(v).trim());
-  if (!Number.isFinite(n)) return null;
-  return n;
-}
+const toFloat = calculations.optionalNumber;
 
 function toDate(v) {
   const s = String(v || "").trim();
@@ -535,90 +530,7 @@ try {
 
   // ---- Derived summary tables for dashboard ----
   console.log("Refreshing derived summary tables...");
-  await db.query("DELETE FROM ge_top_parties");
-  await db.query("DELETE FROM ge_summary");
-
-  const refreshSql = `
-  INSERT INTO ge_summary (year, constituency, constituency_type, winner_party, margin_pct, turnout_pct)
-  SELECT
-    s.year,
-    s.constituency,
-    s.constituency_type,
-    s.winner_party,
-    (s.winner_share - s.runnerup_share) * 100 AS margin_pct,
-    CASE
-      WHEN e.${registeredCol} IS NULL OR e.${registeredCol} = 0 THEN NULL
-      ELSE (
-        (
-          s.total_valid_votes
-          + COALESCE(e.${rejectedCol}, 0)
-          + COALESCE(e.${spoiltCol}, 0)
-        ) / e.${registeredCol}
-      ) * 100
-    END AS turnout_pct
-  FROM (
-    SELECT
-      x.year,
-      x.constituency,
-      MAX(x.constituency_type) AS constituency_type,
-      SUM(x.party_votes) AS total_valid_votes,
-
-      SUBSTRING_INDEX(
-        GROUP_CONCAT(x.party ORDER BY x.party_votes DESC SEPARATOR ','),
-        ',', 1
-      ) AS winner_party,
-
-      MAX(x.party_votes / NULLIF(x.total_votes, 0)) AS winner_share,
-
-      CAST(
-        SUBSTRING_INDEX(
-          SUBSTRING_INDEX(
-            GROUP_CONCAT(x.party_votes / NULLIF(x.total_votes, 0) ORDER BY x.party_votes DESC SEPARATOR ','),
-            ',', 2
-          ),
-          ',', -1
-        ) AS DECIMAL(10, 6)
-      ) AS runnerup_share
-    FROM (
-      SELECT
-        p.year,
-        p.constituency,
-        p.party,
-        MAX(p.constituency_type) AS constituency_type,
-        SUM(COALESCE(p.vote_count, 0)) AS party_votes,
-        SUM(SUM(COALESCE(p.vote_count, 0))) OVER (PARTITION BY p.year, p.constituency) AS total_votes
-      FROM ge_candidate_results p
-      GROUP BY p.year, p.constituency, p.party
-    ) x
-    GROUP BY x.year, x.constituency
-  ) s
-  LEFT JOIN ge_elector_stats e
-    ON e.year = s.year AND e.constituency = s.constituency
-  `;
-  await db.query(refreshSql);
-
-  const topSql = `
-  INSERT INTO ge_top_parties (year, constituency, party, rank_no)
-  SELECT
-    x.year,
-    x.constituency,
-    x.party,
-    x.rank_no
-  FROM (
-    SELECT
-      r.year,
-      r.constituency,
-      r.party,
-      DENSE_RANK() OVER (
-        PARTITION BY r.year, r.constituency
-        ORDER BY SUM(COALESCE(r.vote_count, 0)) DESC
-      ) AS rank_no
-    FROM ge_candidate_results r
-    GROUP BY r.year, r.constituency, r.party
-  ) x
-  WHERE x.rank_no <= 3
-  `;
-  await db.query(topSql);
+  await summaries.rebuildSummaries(db);
   // ---------------------------------------------------------
   // Backfill ge_boundary_features.constituency_type (IMPORTANT)
   // Some boundary rows have NULL constituency_type because

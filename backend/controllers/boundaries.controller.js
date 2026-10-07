@@ -1,3 +1,4 @@
+const { analyseContest, groupContests } = require("../domain/electionResults");
 // controllers/boundaries.controller.js
 
 function upperTrim(v) {
@@ -25,14 +26,6 @@ function makeConstituencyKey(constituency, constituencyType) {
   }
 
   return up;
-}
-
-// If boundary_features has null constituency_type, we can infer from name.
-function inferTypeFromBoundaryName(boundaryName) {
-  const up = upperTrim(boundaryName);
-  if (up.endsWith(" SMC")) return "SMC";
-  if (up.endsWith(" GRC")) return "GRC";
-  return "";
 }
 
 async function getBoundariesByYear(req, res, next) {
@@ -93,82 +86,33 @@ async function getBoundariesSummaryByYear(req, res, next) {
       return;
     }
 
-    // Aggregate votes per party per constituency
     const [rows] = await pool.execute(
-      `
-      SELECT
-        r.constituency,
-        MAX(r.constituency_type) AS constituency_type,
-        r.party,
-        SUM(COALESCE(r.vote_count, 0)) AS party_votes,
-        SUM(SUM(COALESCE(r.vote_count, 0))) OVER (PARTITION BY r.constituency) AS total_votes
-      FROM ge_candidate_results r
-      WHERE r.year = ?
-      GROUP BY r.constituency, r.party
-      `,
-      [year],
+      `SELECT year, constituency, constituency_type, party, candidates, vote_count
+       FROM ge_candidate_results WHERE year = ?`, [year],
     );
-
-    // If there are no results for that year, still return an empty summary
-    if (!rows || rows.length === 0) {
-      res.json({ year, parties: [], summary: {} });
-      return;
-    }
-
-    // Build summary keyed by boundary-style constituency key
     const summary = {};
     const partySet = new Set();
-
-    for (const r of rows) {
-      const constituency = String(r.constituency || "").trim();
-      const ctypeRaw = String(r.constituency_type || "").trim().toUpperCase();
-      const party = String(r.party || "").trim().toUpperCase();
-
-      if (!constituency || !party) continue;
-
-      const key = makeConstituencyKey(constituency, ctypeRaw);
-      if (!key) continue;
-
-      const totalVotes = Number(r.total_votes);
-      const partyVotes = Number(r.party_votes);
-
-      const votePct =
-        Number.isFinite(totalVotes) && totalVotes > 0 && Number.isFinite(partyVotes)
-          ? (partyVotes / totalVotes) * 100
-          : null;
-
-      partySet.add(party);
-
-      if (!summary[key]) {
-        // If we couldn’t trust ctype from results, infer from the boundary-style key
-        const inferred = inferTypeFromBoundaryName(key);
-        summary[key] = {
-          winnerParty: null,
-          constituencyType: ctypeRaw || inferred || null,
-          parties: {},
-        };
+    for (const contestants of groupContests(rows).values()) {
+      const row = contestants[0];
+      const result = analyseContest(contestants);
+      const type = ["GRC", "SMC"].includes(row.constituency_type) ? row.constituency_type : null;
+      const parties = {};
+      for (const contestant of result.contestants) {
+        const party = upperTrim(contestant.party);
+        partySet.add(party);
+        const share = contestant.vote_share;
+        if (!parties[party]) parties[party] = { votePct: share === null ? null : 0 };
+        if (share !== null) parties[party].votePct += share * 100;
       }
-
-      summary[key].parties[party] = { votePct };
-    }
-
-    // Compute winnerParty (highest votePct)
-    for (const key of Object.keys(summary)) {
-      const partiesObj = summary[key].parties || {};
-      const parties = Object.keys(partiesObj);
-
-      let bestParty = null;
-      let bestPct = -Infinity;
-
-      for (const p of parties) {
-        const pct = partiesObj[p] && partiesObj[p].votePct !== null ? Number(partiesObj[p].votePct) : -Infinity;
-        if (pct > bestPct) {
-          bestPct = pct;
-          bestParty = p;
-        }
-      }
-
-      summary[key].winnerParty = bestParty;
+      // Party shares remain grouped for the map legend; winner comes from an individual/team.
+      const winner = result.contestants[0];
+      summary[makeConstituencyKey(row.constituency, type)] = {
+        winnerParty: result.winner_party ? upperTrim(result.winner_party) : null,
+        winnerVotePct: result.winner_party && winner?.vote_share != null ? winner.vote_share * 100 : null,
+        outcome: result.outcome,
+        constituencyType: type,
+        parties,
+      };
     }
 
     res.json({

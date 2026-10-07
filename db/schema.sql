@@ -58,7 +58,8 @@ CREATE TABLE IF NOT EXISTS ge_elector_stats (
 -- API: year, constituency, constituency_type, candidates, party, vote_count, vote_percentage
 -- Notes:
 -- - vote_percentage in dataset is typically a fraction (0..1).
--- - UNIQUE includes candidates to avoid collisions for GRC where same party has multiple candidates.
+-- - One row per contestant: an individual (SMC) or whole team (GRC).
+-- - UNIQUE includes candidates to preserve separate independent candidates.
 -- -----------------------------------------
 CREATE TABLE IF NOT EXISTS ge_candidate_results (
   id BIGINT NOT NULL AUTO_INCREMENT,

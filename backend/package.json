@@ -6,8 +6,10 @@
   "scripts": {
     "dev": "node --watch server.js",
     "start": "node server.js",
+    "rebuild:summary": "node scripts/rebuild_summaries.js",
     "sync:data": "node scripts/sync_data_gov_sg.mjs",
-    "test": "node --test"
+    "test": "node --test test/*.test.js",
+    "test:integration": "node --test integration/*.test.js"
   },
   "keywords": [],
   "author": "",
