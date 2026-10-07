@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "node --test test/dashboard.test.js",
+    "test:ui": "node --import tsx --import ./test/setup-dom.js --test test/*.test.jsx"
   },
   "dependencies": {
     "leaflet": "^1.9.4",
@@ -20,6 +22,8 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.7",
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.1.1",
@@ -27,6 +31,8 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
+    "jsdom": "^27.0.1",
+    "tsx": "^4.23.15",
     "vite": "^7.2.4"
   },
   "engines": {
