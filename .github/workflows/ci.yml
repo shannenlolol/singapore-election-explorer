@@ -29,3 +29,4 @@ jobs:
       - run: pip install -r dash/requirements.txt
       - run: python -m py_compile dash/app.py
       - run: cd dash && python -c 'from app import app; assert app.server.test_client().get("/dash/").status_code == 200'
+      - run: python -m unittest discover -s dash -p 'test_*.py'
