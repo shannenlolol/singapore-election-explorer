@@ -2,7 +2,7 @@
 
 Explore Singapore's general election results through interactive constituency maps, historical comparisons, and party-level vote breakdowns. Open the explorer directly—no account or sign-in required.
 
-Built with **React · Leaflet · Express · MySQL**. The legacy Python Dash/Plotly dashboard is retained temporarily for migration verification. Originally developed as an academic project, now being refactored into a maintainable portfolio application.
+Built with **React · Leaflet · Express · MySQL**. Originally developed as an academic project, now being refactored into a maintainable portfolio application.
 
 ## What it does
 
@@ -31,24 +31,20 @@ This is an independent historical data explorer, not an official elections servi
 ## Architecture
 
 ```text
-Browser → Vite / React (5173)
-              ├── /api/*  → Express (4000) → MySQL (3306)
-              └── /dash/* → Express proxy → Dash (8050)
-                                                      └── Express API → MySQL
+Browser → Vite / React (5173) → /api/* → Express (4000) → MySQL (3306)
 
 data.gov.sg → manual import script → MySQL
 ```
 
-Both Search and Summary are implemented in React. Summary includes party-win rankings, yearly constituency-win comparisons, an exact-count table, and searchable/sortable election-date and party references. The original Dash dashboard remains available at `/dash/` for migration comparisons; normal browsing no longer embeds it.
+Both Search and Summary are implemented in React. Summary includes party-win rankings, yearly constituency-win comparisons, an exact-count table, and searchable/sortable election-date and party references.
 
-The frontend uses relative URLs. Vite proxies the API and optional legacy dashboard through one browser origin. Express owns the public read-only election API and shared database pool; Dash calls the same API without a session. The Python service binds to loopback and should remain private.
+The frontend uses relative URLs. Vite proxies `/api` through one browser origin during development. Express owns the public read-only election API and shared database pool. Search, Summary, and Map all run in the same React application.
 
 ```text
 backend/     Express app, routes, controllers, import scripts, API tests
 frontend/    React pages, data freshness, Leaflet map, styling
-dash/        Python dashboard and Plotly charts
 db/          Initial MySQL schema
-docs/        Refactoring roadmap and screenshot assets
+docs/        Screenshot assets
 ```
 
 ## Run locally
@@ -56,7 +52,6 @@ docs/        Refactoring roadmap and screenshot assets
 ### Prerequisites
 
 - Node.js 24 (or Node.js 22.12+) and npm; `.nvmrc` selects Node.js 24.
-- Python 3.11 and `venv`.
 - Docker with Docker Compose for MySQL.
 - Internet access for dependency installation, data imports, and map tiles.
 
@@ -71,15 +66,10 @@ nvm use
 
 npm ci --prefix backend
 npm ci --prefix frontend
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install -r dash/requirements.txt
 
 cp .env.example .env
 cp backend/.env.example backend/.env
 ```
-
-On Windows, activate Python with `.venv\Scripts\Activate.ps1` in PowerShell instead.
 
 Edit both environment files:
 
@@ -118,9 +108,9 @@ This migration deletes the old account records. The public explorer does not nee
 
 The schema initializes missing tables; it is not a versioned migration system and does not alter incompatible existing columns. Changing a password in `.env` does not change a user already stored in MySQL.
 
-### 3. Start the three application services
+### 3. Start the API and frontend
 
-Run the API and frontend from the repository root in separate terminals. The Python service is optional for normal browsing and is retained for legacy comparisons:
+With MySQL running, start these two processes from the repository root in separate terminals:
 
 ```bash
 # Terminal 1 — API
@@ -128,13 +118,7 @@ npm run dev --prefix backend
 ```
 
 ```bash
-# Optional — legacy dashboard for comparison
-source .venv/bin/activate
-python dash/app.py
-```
-
-```bash
-# Terminal 3 — frontend
+# Terminal 2 — frontend
 npm run dev --prefix frontend
 ```
 
@@ -146,7 +130,6 @@ Stop each development server with `Ctrl+C`. `docker compose stop` stops MySQL wh
 
 - **API unavailable:** check `backend/.env`, MySQL health, and whether ports 3306/4000 are already occupied.
 - **Empty map or dashboard:** confirm the data import completed; an empty database has no results to display.
-- **Legacy dashboard unavailable:** optionally start `python dash/app.py` and check port 8050. React Search and Summary do not need this service.
 
 ## Data refresh and freshness
 
@@ -175,7 +158,7 @@ This corrects historical independent-candidate rankings and turnout calculations
 
 ## Start from VS Code
 
-Open this folder in VS Code. Use **Terminal → Run Task → Explorer: database**, wait for MySQL to become healthy, then run **Explorer: start app** to launch the API, dashboard, and frontend in dedicated terminals. Install dependencies and configure the environment first using the instructions above. Stop any existing servers on ports 4000, 8050, and 5173 before starting another copy. The Python task uses the macOS/Linux `.venv/bin/python` path.
+Open this folder in VS Code. Use **Terminal → Run Task → Explorer: database**, wait for MySQL to become healthy, then run **Explorer: start app** to launch the API and frontend in dedicated terminals. Install dependencies and configure the environment first using the instructions above. Stop any existing servers on ports 4000 and 5173 before starting another copy.
 
 ## Development checks
 
@@ -185,11 +168,9 @@ npm test --prefix frontend
 npm run test:ui --prefix frontend
 npm run lint --prefix frontend
 npm run build --prefix frontend
-python -m py_compile dash/app.py
-python -m unittest discover -s dash -p 'test_*.py'
 ```
 
-GitHub Actions runs these checks, a Dash page smoke test, and a cross-language chart-count comparison against legacy Dash using fixtures. Frontend tests use Node’s test runner, React Testing Library, and jsdom to validate query formatting, multi-select filters, pagination, sorting, details, retries, cancellation, stale-response handling, Summary aggregations, reference tables, and incomplete-data warnings without browser automation. API regression tests use a test database adapter and cover public access, removed account endpoints, import status, origin checks, input validation, database health responses, and Dash callback forwarding. Source-derived fixtures cover historical independents, SMC/GRC contests, multi-party margins, and walkovers; synthetic fixtures cover ties and missing votes. MySQL integration tests exercise actual filters, agreement across APIs, date handling, and rollback after a forced rebuild failure. CI runs these against MySQL 8.4.
+GitHub Actions runs these checks and the MySQL integration suite. Frontend tests use Node’s test runner, React Testing Library, and jsdom to validate query formatting, multi-select filters, pagination, sorting, details, retries, cancellation, stale-response handling, Summary aggregations, reference tables, and incomplete-data warnings without browser automation. API regression tests use a test database adapter and cover public access, removed account endpoints, import status, CORS behaviour, input validation, database health responses, and retired-route responses. Source-derived fixtures cover historical independents, SMC/GRC contests, multi-party margins, and walkovers; synthetic fixtures cover ties and missing votes. MySQL integration tests exercise actual filters, agreement across APIs, date handling, and rollback after a forced rebuild failure. CI runs these against MySQL 8.4.
 
 To run integration tests locally, start an isolated test database (these sample credentials are disposable test values):
 
@@ -203,12 +184,12 @@ docker stop election-parity-test
 
 The suite creates and drops its own uniquely named database and requires CREATE DATABASE privileges. Never point it at a production server.
 
-The production frontend output is `frontend/dist`. Deployment needs HTTPS, a reverse proxy serving the frontend and forwarding `/api` on one origin, and configured database credentials. Vite's development proxy is not included in the built files. If retaining the legacy dashboard, also proxy `/dash` to a private Python service. A production deployment is not included in this repository yet.
+The production frontend output is `frontend/dist`. Deployment needs HTTPS, a reverse proxy serving the frontend and forwarding `/api` on one origin, and configured database credentials. Vite's development proxy is not included in the built files. A production deployment is not included in this repository yet.
 
 ## Data and project status
 
 Dataset identifiers and boundary-year mappings live in `backend/scripts/sync_data_gov_sg.mjs`. The source is [data.gov.sg](https://data.gov.sg/); retain source attribution when publishing derived views and review the source datasets' usage terms.
 
-The foundation refactor adds environment examples, database initialization, modular API startup, public browsing, data freshness reporting, cancellation of stale map requests, dependency updates, and CI. Next steps are removing the legacy Dash service and containerizing the frontend, API, and database. Further improvements include atomic imports, server pagination, map component decomposition, accessibility, and deployment.
+The foundation refactor adds environment examples, database initialization, modular API startup, public browsing, data freshness reporting, cancellation of stale map requests, dependency updates, and CI. The React migration is complete. Next is full-stack Docker Compose for the frontend, API, and database. Further improvements include atomic imports, server pagination, map component decomposition, accessibility, and deployment.
 
-**Known limitations:** the import is not atomic, and the dashboard proxy has unresolved transitive dependency advisories. This is a portfolio project in active refactoring, not a claim of production readiness.
+**Known limitations:** the full import is not atomic, the search API caps results at 800, and source coverage is incomplete as described above. This is a portfolio project in active refactoring, not a claim of production readiness.
