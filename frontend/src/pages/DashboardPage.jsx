@@ -1,6 +1,6 @@
 import { useState } from "react";
 import SearchDashboard from "../features/dashboard/SearchDashboard.jsx";
-import LegacyDashboard from "../features/dashboard/LegacyDashboard.jsx";
+import SummaryDashboard from "../features/dashboard/SummaryDashboard.jsx";
 import "../features/dashboard/dashboard.css";
 
 export default function DashboardPage() {
@@ -11,6 +11,6 @@ export default function DashboardPage() {
       <button aria-pressed={view === "summary"} onClick={() => setView("summary")}>Summary</button>
     </nav>
     <div hidden={view !== "search"}><SearchDashboard /></div>
-    {view === "summary" && <LegacyDashboard />}
+    {view === "summary" && <SummaryDashboard />}
   </main>;
 }
