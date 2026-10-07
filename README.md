@@ -2,7 +2,7 @@
 
 Explore Singapore's general election results through interactive constituency maps, historical comparisons, and party-level vote breakdowns. Open the explorer directly—no account or sign-in required.
 
-Built with **React · Leaflet · Express · MySQL · Python Dash · Plotly**. Originally developed as an academic project, now being refactored into a maintainable portfolio application.
+Built with **React · Leaflet · Express · MySQL**. The legacy Python Dash/Plotly dashboard is retained temporarily for migration verification. Originally developed as an academic project, now being refactored into a maintainable portfolio application.
 
 ## What it does
 
@@ -39,9 +39,9 @@ Browser → Vite / React (5173)
 data.gov.sg → manual import script → MySQL
 ```
 
-The Search tab (filters, results table, and constituency details) is implemented in React. Summary temporarily remains embedded Python Dash while its migration is pending. The original Dash Search remains available at `/dash/` for comparison.
+Both Search and Summary are implemented in React. Summary includes party-win rankings, yearly constituency-win comparisons, an exact-count table, and searchable/sortable election-date and party references. The original Dash dashboard remains available at `/dash/` for migration comparisons; normal browsing no longer embeds it.
 
-The frontend uses relative URLs. Vite proxies both the API and embedded dashboard through one browser origin. Express owns the public read-only election API and shared database pool; Dash calls the same API without a session. The Python service binds to loopback and should remain private.
+The frontend uses relative URLs. Vite proxies the API and optional legacy dashboard through one browser origin. Express owns the public read-only election API and shared database pool; Dash calls the same API without a session. The Python service binds to loopback and should remain private.
 
 ```text
 backend/     Express app, routes, controllers, import scripts, API tests
@@ -120,7 +120,7 @@ The schema initializes missing tables; it is not a versioned migration system an
 
 ### 3. Start the three application services
 
-Run each command from the repository root in a separate terminal:
+Run the API and frontend from the repository root in separate terminals. The Python service is optional for normal browsing and is retained for legacy comparisons:
 
 ```bash
 # Terminal 1 — API
@@ -128,7 +128,7 @@ npm run dev --prefix backend
 ```
 
 ```bash
-# Terminal 2 — dashboard
+# Optional — legacy dashboard for comparison
 source .venv/bin/activate
 python dash/app.py
 ```
@@ -146,7 +146,7 @@ Stop each development server with `Ctrl+C`. `docker compose stop` stops MySQL wh
 
 - **API unavailable:** check `backend/.env`, MySQL health, and whether ports 3306/4000 are already occupied.
 - **Empty map or dashboard:** confirm the data import completed; an empty database has no results to display.
-- **Dashboard service unavailable:** start `python dash/app.py` and check port 8050. Use the frontend URL to view the embedded dashboard.
+- **Legacy dashboard unavailable:** optionally start `python dash/app.py` and check port 8050. React Search and Summary do not need this service.
 
 ## Data refresh and freshness
 
@@ -167,11 +167,12 @@ npm run test:ui --prefix frontend
 npm run lint --prefix frontend
 npm run build --prefix frontend
 python -m py_compile dash/app.py
+python -m unittest discover -s dash -p 'test_*.py'
 ```
 
-GitHub Actions runs these checks and a Dash page smoke test. Frontend tests use Node’s test runner, React Testing Library, and jsdom to validate query formatting, multi-select filters, pagination, sorting, details, retries, cancellation, and stale-response handling without browser automation. API regression tests use a test database adapter and cover public access, removed account endpoints, import status, origin checks, input validation, database health responses, and Dash callback forwarding. They do not replace full MySQL and browser integration tests.
+GitHub Actions runs these checks, a Dash page smoke test, and a cross-language chart-count comparison against legacy Dash using fixtures. Frontend tests use Node’s test runner, React Testing Library, and jsdom to validate query formatting, multi-select filters, pagination, sorting, details, retries, cancellation, stale-response handling, Summary aggregations, reference tables, and incomplete-data warnings without browser automation. API regression tests use a test database adapter and cover public access, removed account endpoints, import status, origin checks, input validation, database health responses, and Dash callback forwarding. They do not replace full MySQL integration tests or a source-data correctness audit.
 
-The production frontend output is `frontend/dist`. Deployment needs HTTPS, a reverse proxy serving the frontend and forwarding `/api` and `/dash` on one origin, a private Dash service, and configured database credentials. Vite's development proxy is not included in the built files. A production deployment is not included in this repository yet.
+The production frontend output is `frontend/dist`. Deployment needs HTTPS, a reverse proxy serving the frontend and forwarding `/api` on one origin, and configured database credentials. Vite's development proxy is not included in the built files. If retaining the legacy dashboard, also proxy `/dash` to a private Python service. A production deployment is not included in this repository yet.
 
 ## Data and project status
 
