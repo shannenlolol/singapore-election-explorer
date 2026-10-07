@@ -1,0 +1,5 @@
+# Publish MySQL only when running Node/Vite directly on the host.
+services:
+  mysql:
+    ports:
+      - "127.0.0.1:${DB_PUBLISHED_PORT:-3306}:3306"
