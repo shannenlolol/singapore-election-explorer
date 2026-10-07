@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { emptyFilters, searchQuery, formatPercent, formatNumber, splitCandidates, sortRows, rowKey } from '../src/features/dashboard/model.js';
 
-test('empty filters omit query constraints, matching Dash All behaviour', () => {
+test('empty filters omit query constraints, selecting all results', () => {
   assert.equal(searchQuery(emptyFilters()), '');
 });
 test('multi-select filters retain the API CSV contract and encode constituency names', () => {
@@ -13,7 +13,7 @@ test('multi-select filters retain the API CSV contract and encode constituency n
   assert.equal(params.get('constituencies'), 'Ang Mo Kio');
   assert.equal(params.has('types'), false);
 });
-test('margin percentage points and fractional vote shares use the legacy units', () => {
+test('margin percentage points and fractional vote shares use the API units', () => {
   assert.equal(formatPercent(19.42), '19.420%');
   assert.equal(formatPercent(0.5971, 2, 100), '59.71%');
   assert.equal(formatPercent(0), '0.000%');
@@ -22,7 +22,7 @@ test('margin percentage points and fractional vote shares use the legacy units',
   assert.equal(formatNumber(null), '—');
   assert.equal(formatNumber(0), '0');
 });
-test('candidate delimiters match legacy semicolon and pipe handling', () => {
+test('candidate delimiters support semicolon and pipe delimiters', () => {
   assert.deepEqual(splitCandidates(' Alice ; Bob | Carol ;; '), ['Alice', 'Bob', 'Carol']);
   assert.deepEqual(splitCandidates(null), []);
 });

@@ -28,7 +28,7 @@ before(async () => {
   await db.query("INSERT INTO political_parties (abbreviation, political_party) VALUES ('PAP', 'People''s Action Party'), ('WP', 'Workers'' Party')");
   await db.query("INSERT INTO ge_dates (year, polling_day) VALUES (2025, '2025-05-03')");
   assert.equal(await rebuildSummaries(db), 8);
-  server = createApp({ pool: db, config: { origins: [], dashUrl: 'http://127.0.0.1:1' } }).listen(0, '127.0.0.1');
+  server = createApp({ pool: db, config: { origins: [] } }).listen(0, '127.0.0.1');
   await new Promise(resolve => server.once('listening', resolve));
   base = `http://127.0.0.1:${server.address().port}`;
 });

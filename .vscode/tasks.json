@@ -17,15 +17,6 @@
       }
     },
     {
-      "label": "Explorer: dashboard",
-      "type": "shell",
-      "command": ".venv/bin/python dash/app.py",
-      "problemMatcher": [],
-      "presentation": {
-        "panel": "dedicated"
-      }
-    },
-    {
       "label": "Explorer: frontend",
       "type": "shell",
       "command": "npm run dev --prefix frontend",
@@ -38,7 +29,6 @@
       "label": "Explorer: start app",
       "dependsOn": [
         "Explorer: API",
-        "Explorer: dashboard",
         "Explorer: frontend"
       ],
       "dependsOrder": "parallel",

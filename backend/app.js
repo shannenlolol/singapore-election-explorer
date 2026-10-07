@@ -1,6 +1,5 @@
 const express = require("express");
 const cors = require("cors");
-const { createProxyMiddleware } = require("http-proxy-middleware");
 const dashboardRoutes = require("./routes/dashboard.routes");
 const boundariesRoutes = require("./routes/boundaries.routes");
 
@@ -14,29 +13,6 @@ function createApp({ pool, config }) {
     res.set("Cache-Control", "no-store");
     next();
   });
-  // Dash callbacks use POST; accept them only from the configured frontend origins.
-  app.use((req, res, next) => {
-    const origin = req.get("origin");
-    if (!["GET", "HEAD", "OPTIONS"].includes(req.method) &&
-        (req.get("sec-fetch-site") === "cross-site" || (origin && !config.origins.includes(origin)))) {
-      return res.status(403).json({ message: "Origin is not allowed." });
-    }
-    next();
-  });
-  // Proxy before JSON parsing so Dash receives callback request bodies intact.
-  app.use("/dash", createProxyMiddleware({
-    target: config.dashUrl,
-    changeOrigin: true,
-    pathRewrite: path => `/dash${path}`,
-    proxyTimeout: 30000,
-    on: {
-      error: (_err, _req, res) => {
-        if (!res.headersSent) res.writeHead(502, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ message: "Dashboard service is unavailable." }));
-      },
-    },
-  }));
-  app.use(express.json({ limit: "16kb" }));
   app.use("/api/dashboard", dashboardRoutes);
   app.use("/api/boundaries", boundariesRoutes);
   app.get("/api/data-status", async (_req, res) => {

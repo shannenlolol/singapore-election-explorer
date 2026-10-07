@@ -1,6 +1,5 @@
 const { test, before, after } = require("node:test");
 const assert = require("node:assert/strict");
-const http = require("node:http");
 const { createApp } = require("../app");
 const { loadConfig } = require("../config");
 let server, base, dbFails = false, statusRows = [];
@@ -13,7 +12,7 @@ const pool = {
   execute: async () => [[]],
 };
 before(async () => {
-  server = createApp({ pool, config: { origins: ["http://localhost:5173"], dashUrl: "http://127.0.0.1:1" } }).listen(0, "127.0.0.1");
+  server = createApp({ pool, config: { origins: ["http://localhost:5173"] } }).listen(0, "127.0.0.1");
   await new Promise(resolve => server.once("listening", resolve));
   base = `http://127.0.0.1:${server.address().port}`;
 });
@@ -51,9 +50,12 @@ test("data freshness distinguishes unknown, successful, running and failed impor
   }
   statusRows = [];
 });
-test("cross-site callbacks are rejected", async () => {
-  const response = await fetch(base + "/dash/_dash-update-component", { method: "POST", headers: { Origin: "https://untrusted.example" } });
-  assert.equal(response.status, 403);
+test("CORS allows the configured frontend without enabling credentials", async () => {
+  const allowed = await fetch(base + "/api/health", { headers: { Origin: "http://localhost:5173" } });
+  assert.equal(allowed.headers.get("access-control-allow-origin"), "http://localhost:5173");
+  assert.equal(allowed.headers.get("access-control-allow-credentials"), null);
+  const other = await fetch(base + "/api/health", { headers: { Origin: "https://untrusted.example" } });
+  assert.equal(other.headers.get("access-control-allow-origin"), null);
 });
 test("invalid boundary years fail before querying the database", async () => {
   for (const year of ["", "nope", "2025.5", "0"]) {
@@ -72,28 +74,10 @@ test("database failures do not expose connection details", async () => {
     assert.deepEqual(await status.json(), { message: "An unexpected server error occurred." });
   } finally { dbFails = false; }
 });
-test("public Dash callbacks preserve paths and JSON bodies without cookies", async () => {
-  let received;
-  const upstream = http.createServer(async (req, res) => {
-    let body = "";
-    for await (const chunk of req) body += chunk;
-    received = { path: req.url, body, cookie: req.headers.cookie };
-    res.setHeader("Content-Type", "application/json");
-    res.end(JSON.stringify({ ok: true }));
-  });
-  upstream.listen(0, "127.0.0.1");
-  await new Promise(resolve => upstream.once("listening", resolve));
-  const proxy = createApp({ pool, config: { origins: ["http://localhost:5173"], dashUrl: `http://127.0.0.1:${upstream.address().port}` } }).listen(0, "127.0.0.1");
-  await new Promise(resolve => proxy.once("listening", resolve));
-  try {
-    const body = JSON.stringify({ output: "chart.figure", inputs: [] });
-    const response = await fetch(`http://127.0.0.1:${proxy.address().port}/dash/_dash-update-component`, {
-      method: "POST", headers: { "Content-Type": "application/json" }, body,
-    });
-    assert.equal(response.status, 200);
-    assert.deepEqual(received, { path: "/dash/_dash-update-component", body, cookie: undefined });
-  } finally {
-    await new Promise(resolve => proxy.close(resolve));
-    await new Promise(resolve => upstream.close(resolve));
+test("retired dashboard routes and callbacks return 404 without an upstream service", async () => {
+  for (const [path, method] of [["/dash/", "GET"], ["/dash/_dash-layout", "GET"], ["/dash/_dash-update-component", "POST"]]) {
+    const response = await fetch(base + path, { method });
+    assert.equal(response.status, 404);
+    assert.deepEqual(await response.json(), { message: "Route not found." });
   }
 });
