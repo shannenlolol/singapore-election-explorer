@@ -31,86 +31,90 @@ This is an independent historical data explorer, not an official elections servi
 ## Architecture
 
 ```text
-Browser → Vite / React (5173) → /api/* → Express (4000) → MySQL (3306)
+Browser → nginx / React (8080) → /api/* → Express (4000) → MySQL (3306)
 
-data.gov.sg → manual import script → MySQL
+data.gov.sg → explicit maintainer import → MySQL
 ```
 
-Both Search and Summary are implemented in React. Summary includes party-win rankings, yearly constituency-win comparisons, an exact-count table, and searchable/sortable election-date and party references.
-
-The frontend uses relative URLs. Vite proxies `/api` through one browser origin during development. Express owns the public read-only election API and shared database pool. Search, Summary, and Map all run in the same React application.
+Search, Summary, and Map run in one React application. nginx serves the built frontend and forwards `/api` to Express on the same origin. Only the frontend is published to the host, on loopback. The API and database communicate over Docker networks; the database network is internal. API and frontend processes run as non-root users.
 
 ```text
-backend/     Express app, routes, controllers, import scripts, API tests
-frontend/    React pages, data freshness, Leaflet map, styling
-db/          Initial MySQL schema
+backend/     Express API, calculations, import scripts, tests, Dockerfile
+frontend/    React dashboard and map, nginx config, Dockerfile
+db/          MySQL initialization schema and account-removal migration
 docs/        Screenshot assets
 ```
 
-## Run locally
+## Run with Docker Compose
 
-### Prerequisites
-
-- Node.js 24 (or Node.js 22.12+) and npm; `.nvmrc` selects Node.js 24.
-- Docker with Docker Compose for MySQL.
-- Internet access for dependency installation, data imports, and map tiles.
-
-### 1. Install and configure
+Requires Docker with Compose v2 supporting `up --wait`. Host Node.js is only needed for local development.
 
 ```bash
 git clone https://github.com/shannenlolol/singapore-election-explorer.git
 cd singapore-election-explorer
-# If you use nvm:
-nvm install
-nvm use
-
-npm ci --prefix backend
-npm ci --prefix frontend
-
 cp .env.example .env
-cp backend/.env.example backend/.env
 ```
 
-Edit both environment files:
-
-| File | Setting | Value |
-| --- | --- | --- |
-| `.env` | `MYSQL_ROOT_PASSWORD` | A local database root password |
-| Both files | `DB_PASSWORD` | The **same** local app database password |
-| `backend/.env` | `DGS_API_KEY` | Optional data.gov.sg API key for imports |
-
-Local `.env` files are ignored by Git; only `.env.example` templates belong in version control. The example values are placeholders; choose your own secrets.
-
-### 2. Start MySQL and import data
+Set `MYSQL_ROOT_PASSWORD` and `DB_PASSWORD` in `.env` to your own local passwords. `WEB_PORT` defaults to `8080`; `DGS_API_KEY` is optional. Compose supplies database settings directly to the API; `backend/.env` is not needed for this workflow. Local environment files and dependencies are excluded from Docker build contexts.
 
 ```bash
-docker compose up -d mysql
-docker compose ps
-# Wait for MySQL to become healthy before continuing.
-npm run sync:data --prefix backend
+docker compose up -d --build --wait
+# A new database starts empty. Import public data explicitly:
+docker compose run --rm api npm run sync:data
 ```
 
-The schema is initialized automatically on a **new** Docker volume. Importing public data can take several minutes and may be affected by upstream rate limits. The app has no bundled results; run the import before using the map or dashboard. The import rebuilds derived summary tables, so run it against your local development database.
+Open **http://localhost:8080** (or your `WEB_PORT`). The import can take several minutes and requires internet access. Browsing only queries MySQL; restarts never download or import data automatically.
 
-If reusing an existing volume, initialization scripts do not run again. For a database created by an older checkout, apply the additive schema without deleting its volume:
+MySQL must pass a database query before the API starts, and the API must pass its database-backed health check before nginx starts. nginx also has its own static health check. See [Compose startup ordering](https://docs.docker.com/compose/how-tos/startup-order/) for the health dependency behaviour. An unhealthy service is reported as unhealthy; health failure alone does not automatically restart it.
+
+Useful commands:
+
+```bash
+docker compose ps
+docker compose logs -f api frontend
+# Recalculate summaries from existing data, without downloading:
+docker compose run --rm api npm run rebuild:summary
+# Stop while retaining data:
+docker compose stop
+# Resume:
+docker compose up -d --wait
+# Rebuild after code changes:
+docker compose up -d --build --wait
+```
+
+The named `mysql_data` volume persists across container recreation and `docker compose down`. **`docker compose down --volumes` deletes the database.** Keep the same project/folder name to reuse the existing volume. Changing a password in `.env` does not change a MySQL user already stored in that volume.
+
+### Existing databases
+
+The existing `mysql_data` volume is retained when upgrading this repository. Initialization runs only for a new volume. To add missing tables to an older database without deleting data:
 
 ```bash
 docker compose exec -T mysql sh -c 'exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD" election_db' < db/schema.sql
 ```
 
-For an older installation that contains accounts, remove the unused account table after applying the schema:
+For installations that still contain the old accounts table:
 
 ```bash
 docker compose exec -T mysql sh -c 'exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD" election_db' < db/migrations/001-remove-accounts.sql
 ```
 
-This migration deletes the old account records. The public explorer does not need them.
+The migration deletes unused account records. The schema creates missing tables; it is not a versioned migration system and does not alter incompatible existing columns.
 
-The schema initializes missing tables; it is not a versioned migration system and does not alter incompatible existing columns. Changing a password in `.env` does not change a user already stored in MySQL.
+## Local development with hot reload
 
-### 3. Start the API and frontend
+Use Node.js 24 and npm, with only MySQL in Docker. Configure the root `.env` as described above first:
 
-With MySQL running, start these two processes from the repository root in separate terminals:
+```bash
+npm ci --prefix backend
+npm ci --prefix frontend
+cp backend/.env.example backend/.env
+# Use the same DB_PASSWORD as the root .env file.
+# If switching from the full stack, stop its API/frontend first:
+docker compose stop api frontend
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d --wait mysql
+```
+
+The development override publishes MySQL on `127.0.0.1:3306`. If you change `DB_PUBLISHED_PORT` in the root `.env`, match `DB_PORT` in `backend/.env`.
 
 ```bash
 # Terminal 1 — API
@@ -118,22 +122,22 @@ npm run dev --prefix backend
 ```
 
 ```bash
-# Terminal 2 — frontend
+# Terminal 2 — Vite frontend
 npm run dev --prefix frontend
 ```
 
-Open **http://localhost:5173** to go directly to the Dashboard. Switch to Map using the navigation. Check database connectivity at **http://localhost:4000/api/health**.
-
-Stop each development server with `Ctrl+C`. `docker compose stop` stops MySQL while preserving its data.
+Open **http://localhost:5173**. Vite forwards `/api` to the local API on port 4000. Maintainers can import with `npm run sync:data --prefix backend`. Stop Node/Vite with `Ctrl+C` before switching workflows. Starting the full-stack Compose configuration again removes the development database port mapping.
 
 ### Troubleshooting
 
-- **API unavailable:** check `backend/.env`, MySQL health, and whether ports 3306/4000 are already occupied.
-- **Empty map or dashboard:** confirm the data import completed; an empty database has no results to display.
+- **Unhealthy API/database:** use `docker compose ps` and `docker compose logs api mysql`; verify credentials match the existing volume.
+- **Empty results:** a new database needs the explicit import command. Check the import output if it fails.
+- **Port already in use:** change `WEB_PORT` for Docker or stop the existing local process. MySQL is published only by the development override.
+- **Source requests fail:** imports require outbound internet access and may encounter data.gov.sg rate limits. The importer records failure; see the data limitations below before retrying.
 
 ## Data refresh and freshness
 
-Refresh is a maintainer operation: run `npm run sync:data --prefix backend`. There is no public refresh button or import endpoint. Browsing and filtering only query MySQL; they do not trigger imports.
+Refresh is a maintainer operation: run `docker compose run --rm api npm run sync:data` (or `npm run sync:data --prefix backend` in local development). There is no public refresh button or import endpoint. Browsing and filtering only query MySQL; they do not trigger imports.
 
 The header links to data.gov.sg and shows **Data last updated**, meaning the last completed local import, in Singapore time. It is not the publisher's update date. A fresh or older database without an import record shows no completed import; running and failed imports are explicitly indicated. Since the importer is not yet atomic, a failed import may leave partial data even when an older successful timestamp exists. Status is checked once a minute.
 
@@ -142,7 +146,8 @@ The header links to data.gov.sg and shows **Data last updated**, meaning the las
 After updating from an older checkout, recalculate summaries without downloading data:
 
 ```bash
-npm run rebuild:summary --prefix backend
+docker compose run --rm api npm run rebuild:summary
+# Local development alternative: npm run rebuild:summary --prefix backend
 ```
 
 This corrects historical independent-candidate rankings and turnout calculations. Both derived tables are replaced in one transaction; a failure preserves the previous summaries. Source records are unchanged, and this local recalculation does not advance the last-import timestamp. Future imports use the same calculations automatically. Stop any concurrent import before rebuilding.
@@ -156,40 +161,8 @@ This corrects historical independent-candidate rankings and turnout calculations
 - The [results dataset](https://data.gov.sg/datasets/d_581a30bee57fa7d8383d6bc94739ad00/view) inspected on 7 October 2026 contains 753 constituency/year records, including only 33 for 2025: it omits the Marine Parade walkover. The app does not invent missing records. Charts count available constituencies, **not seats or a complete official tally**.
 - Search currently returns at most 800 results; Search and Summary warn when that limit is reached. Server pagination and complete import publication remain follow-up work.
 
-## Start from VS Code
-
-Open this folder in VS Code. Use **Terminal → Run Task → Explorer: database**, wait for MySQL to become healthy, then run **Explorer: start app** to launch the API and frontend in dedicated terminals. Install dependencies and configure the environment first using the instructions above. Stop any existing servers on ports 4000 and 5173 before starting another copy.
-
-## Development checks
-
-```bash
-npm test --prefix backend
-npm test --prefix frontend
-npm run test:ui --prefix frontend
-npm run lint --prefix frontend
-npm run build --prefix frontend
-```
-
-GitHub Actions runs these checks and the MySQL integration suite. Frontend tests use Node’s test runner, React Testing Library, and jsdom to validate query formatting, multi-select filters, pagination, sorting, details, retries, cancellation, stale-response handling, Summary aggregations, reference tables, and incomplete-data warnings without browser automation. API regression tests use a test database adapter and cover public access, removed account endpoints, import status, CORS behaviour, input validation, database health responses, and retired-route responses. Source-derived fixtures cover historical independents, SMC/GRC contests, multi-party margins, and walkovers; synthetic fixtures cover ties and missing votes. MySQL integration tests exercise actual filters, agreement across APIs, date handling, and rollback after a forced rebuild failure. CI runs these against MySQL 8.4.
-
-To run integration tests locally, start an isolated test database (these sample credentials are disposable test values):
-
-```bash
-docker run -d --rm --name election-parity-test \
-  -e MYSQL_ROOT_PASSWORD=fixture-only -p 127.0.0.1:3307:3306 mysql:8.4
-# Wait until MySQL is ready, then:
-TEST_DB_PORT=3307 TEST_DB_PASSWORD=fixture-only npm run test:integration --prefix backend
-docker stop election-parity-test
-```
-
-The suite creates and drops its own uniquely named database and requires CREATE DATABASE privileges. Never point it at a production server.
-
-The production frontend output is `frontend/dist`. Deployment needs HTTPS, a reverse proxy serving the frontend and forwarding `/api` on one origin, and configured database credentials. Vite's development proxy is not included in the built files. A production deployment is not included in this repository yet.
-
 ## Data and project status
 
 Dataset identifiers and boundary-year mappings live in `backend/scripts/sync_data_gov_sg.mjs`. The source is [data.gov.sg](https://data.gov.sg/); retain source attribution when publishing derived views and review the source datasets' usage terms.
-
-The foundation refactor adds environment examples, database initialization, modular API startup, public browsing, data freshness reporting, cancellation of stale map requests, dependency updates, and CI. The React migration is complete. Next is full-stack Docker Compose for the frontend, API, and database. Further improvements include atomic imports, server pagination, map component decomposition, accessibility, and deployment.
 
 **Known limitations:** the full import is not atomic, the search API caps results at 800, and source coverage is incomplete as described above. This is a portfolio project in active refactoring, not a claim of production readiness.
