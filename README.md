@@ -39,6 +39,8 @@ Browser → Vite / React (5173)
 data.gov.sg → manual import script → MySQL
 ```
 
+The Search tab (filters, results table, and constituency details) is implemented in React. Summary temporarily remains embedded Python Dash while its migration is pending. The original Dash Search remains available at `/dash/` for comparison.
+
 The frontend uses relative URLs. Vite proxies both the API and embedded dashboard through one browser origin. Express owns the public read-only election API and shared database pool; Dash calls the same API without a session. The Python service binds to loopback and should remain private.
 
 ```text
@@ -160,12 +162,14 @@ Open this folder in VS Code. Use **Terminal → Run Task → Explorer: database*
 
 ```bash
 npm test --prefix backend
+npm test --prefix frontend
+npm run test:ui --prefix frontend
 npm run lint --prefix frontend
 npm run build --prefix frontend
 python -m py_compile dash/app.py
 ```
 
-GitHub Actions runs these checks and a Dash page smoke test. API regression tests use a test database adapter and cover public access, removed account endpoints, import status, origin checks, input validation, database health responses, and Dash callback forwarding. They do not replace full MySQL and browser integration tests.
+GitHub Actions runs these checks and a Dash page smoke test. Frontend tests use Node’s test runner, React Testing Library, and jsdom to validate query formatting, multi-select filters, pagination, sorting, details, retries, cancellation, and stale-response handling without browser automation. API regression tests use a test database adapter and cover public access, removed account endpoints, import status, origin checks, input validation, database health responses, and Dash callback forwarding. They do not replace full MySQL and browser integration tests.
 
 The production frontend output is `frontend/dist`. Deployment needs HTTPS, a reverse proxy serving the frontend and forwarding `/api` and `/dash` on one origin, a private Dash service, and configured database credentials. Vite's development proxy is not included in the built files. A production deployment is not included in this repository yet.
 
