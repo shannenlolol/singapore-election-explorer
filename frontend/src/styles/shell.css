@@ -4,7 +4,7 @@
 .topbar-inner { max-width: none; min-height: 82px; padding: 16px 32px; display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 24px; }
 .topbar-brand { gap: 10px; }
 .topbar-title { color: var(--text); font-size: 14px; font-weight: 700; white-space: normal; }
-.topbar-dot { width: 36px; height: 36px; padding: 4px; border: 1px solid var(--border); border-radius: 10px; background: #fff; box-shadow: 0 2px 6px #0003; flex-shrink: 0; }
+.topbar-dot { width: 36px; height: 36px; padding: 0; border: 0; border-radius: 50%; background: transparent; box-shadow: none; filter: drop-shadow(0 2px 3px #0003); object-fit: contain; flex-shrink: 0; }
 .topbar-nav { margin: 0; gap: 4px; padding: 4px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface-2); }
 .topbar-link { color: var(--muted); background: transparent; border: 1px solid transparent; border-radius: 8px; font-size: 13px; padding: 9px 13px; }
 .topbar-link:hover, .topbar-link.is-active:hover { color: var(--primary); background: var(--active); text-decoration: none; }
