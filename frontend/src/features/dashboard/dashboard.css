@@ -164,3 +164,9 @@
 .year-stack > .chart-mark { height: 100%; }
 .chart-mark:focus-visible { outline-offset: 3px; }
 @media (max-width: 650px) { .pagination-buttons { order: 3; width: 100%; justify-content: center; } }
+
+.search-results .results-table tbody tr { cursor: pointer; }
+.search-results .results-table tbody tr:focus-within { background: var(--active); }
+.results-table .constituency-link { display: flex; flex-direction: column; gap: 5px; }
+.details-link-hint { color: var(--primary); font-size: 11px; font-weight: 500; }
+.search-details { scroll-margin-top: calc(var(--header-height, 82px) + 16px); }

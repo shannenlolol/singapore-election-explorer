@@ -153,3 +153,19 @@ test('detail panel distinguishes independent contestants and explains walkovers 
     Object.assign(details, original);
   }
 });
+
+test('clicking a result row opens its candidate details and closing returns to its accessible button', async () => {
+  const user = userEvent.setup();
+  render(<SearchDashboard />);
+  const trigger = await screen.findByRole('button', { name: 'View Aljunied 2025 details' });
+  const row = trigger.closest('tr');
+  await user.click(within(row).getByText('GRC'));
+  const panel = await screen.findByRole('complementary', { name: 'Aljunied 2025' });
+  await within(panel).findByText('Alice');
+  assert.ok(within(panel).getByText('Bob'));
+  assert.ok(within(panel).getByText('79,254 votes · 59.71%'));
+  await user.click(within(panel).getByRole('button', { name: 'Close constituency details' }));
+  assert.equal(document.activeElement, trigger);
+  await user.keyboard('{Enter}');
+  await screen.findByRole('complementary', { name: 'Aljunied 2025' });
+});

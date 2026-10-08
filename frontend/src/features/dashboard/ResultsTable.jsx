@@ -20,13 +20,16 @@ export default function ResultsTable({ rows, selected, onSelect, partyNames }) {
   return <>
     <div className="results-scroll">
       <table className="results-table">
-        <caption>Election results. Select a constituency to view its details.</caption>
+        <caption>Election results. Click a row to view candidates, votes, and elector statistics.</caption>
         <thead><tr>{columns.map(([key, label]) => <th key={key} scope="col" aria-sort={sort.key === key ? (sort.direction === "asc" ? "ascending" : "descending") : "none"}>
           <button onClick={() => changeSort(key)}>{label}{sort.key === key ? (sort.direction === "asc" ? " ↑" : " ↓") : " ↕"}</button>
         </th>)}</tr></thead>
-        <tbody>{sorted.slice(currentPage * pageSize, (currentPage + 1) * pageSize).map(row => <tr key={rowKey(row)} className={selected && rowKey(selected) === rowKey(row) ? "is-selected" : ""}>
+        <tbody>{sorted.slice(currentPage * pageSize, (currentPage + 1) * pageSize).map(row => <tr key={rowKey(row)} onClick={event => {
+          if (event.target.closest('button, a, input, select')) return;
+          onSelect(row, event.currentTarget.querySelector('.constituency-link'));
+        }} className={selected && rowKey(selected) === rowKey(row) ? "is-selected" : ""}>
           <td>{row.year}</td>
-          <td><button className="constituency-link" aria-label={`View ${row.constituency} ${row.year} details`} aria-pressed={Boolean(selected && rowKey(selected) === rowKey(row))} onClick={event => onSelect(row, event.currentTarget)}>{row.constituency}</button></td>
+          <td><button className="constituency-link" aria-label={`View ${row.constituency} ${row.year} details`} aria-pressed={Boolean(selected && rowKey(selected) === rowKey(row))} onClick={event => onSelect(row, event.currentTarget)}><span>{row.constituency}</span><small className="details-link-hint">View candidates &amp; results →</small></button></td>
           <td>{row.constituency_type || "—"}</td>
           <td>{splitParties(row.contesting_parties).map(party => <span className="search-party" style={{ "--party-color": partyColor(party) }} title={partyNames[party]} key={party}>{party}</span>)}</td>
           <td><span className="search-party" style={{ "--party-color": partyColor(row.winner_party) }} title={partyNames[row.winner_party]}>{row.winner_party || "—"}</span></td>
