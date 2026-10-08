@@ -914,7 +914,6 @@ export default function MapPage() {
     [year, typeFilter, partyContestedFilter, partyWinnerFilter, search, activeSummary, matchedCount],
   );
 
-  const navBarHeight = 61;
 
   // NEW: tile URLs
   const TILE_DEFAULT = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
@@ -927,7 +926,7 @@ export default function MapPage() {
     <div
       style={{
         position: "relative",
-        height: `calc(100vh - ${navBarHeight}px)`,
+        height: "calc(100dvh - var(--header-height, 82px))",
         width: "100%",
       }}
     >
@@ -1021,7 +1020,7 @@ export default function MapPage() {
           top: 0,
           left: 0,
           bottom: 0,
-          width: SIDEBAR_WIDTH,
+          width: `min(${SIDEBAR_WIDTH}px, calc(100vw - 40px))`,
           zIndex: 9000,
           transform: sidebarCollapsed ? `translateX(-${SIDEBAR_WIDTH}px)` : "translateX(0px)",
           transition: `transform ${TRANSITION_MS}ms ease`,
@@ -1032,15 +1031,15 @@ export default function MapPage() {
           style={{
             height: "100%",
             width: "100%",
-            background: "#2b2f38",
-            color: "rgba(255,255,255,0.92)",
-            borderRight: "1px solid rgba(255,255,255,0.12)",
-            boxShadow: "0 8px 24px rgba(0,0,0,0.35)",
+            background: "var(--surface)",
+            color: "var(--text)",
+            borderRight: "1px solid var(--border)",
+            boxShadow: "var(--shadow)",
           }}
           className="h-full rounded-r-2xl"
         >
           {sidebarCollapsed ? null : (
-            <div className="h-full">
+            <div className="map-filters-inner">
               <div className="map-sidebar-top">
                 <div className="map-sidebar-top-row">
                   <div className="map-sidebar-title">Filters</div>
@@ -1161,9 +1160,9 @@ export default function MapPage() {
             height: 56,
             width: HANDLE_WIDTH,
             borderRadius: 999,
-            border: "1px solid rgba(255,255,255,0.12)",
-            background: "#2b2f38",
-            boxShadow: "0 8px 20px rgba(0,0,0,0.35)",
+            border: "1px solid var(--border)",
+            background: "var(--surface)",
+            boxShadow: "var(--shadow)",
             cursor: "pointer",
             transform: "translateX(-50%)",
           }}
@@ -1174,7 +1173,7 @@ export default function MapPage() {
               fontSize: 18,
               fontWeight: 700,
               lineHeight: "56px",
-              color: "rgba(255,255,255,0.75)",
+              color: "var(--text)",
               textAlign: "center",
             }}
           >

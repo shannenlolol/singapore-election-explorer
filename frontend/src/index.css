@@ -715,25 +715,14 @@ select.input {
   outline: 2px solid rgba(33,212,253,0.55);
   outline-offset: 2px;
 }
-/* OPAQUE DARK SIDEBAR (no blur / no translucency) */
-.map-sidebar,
-.map-sidebar.open,
-.map-sidebar.collapsed,
-/* .map-sidebar-top, */
-.map-sidebar-body {
-  background: #2c2d2f; 
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
-}
 
-/* Optional: border / text */
-.map-sidebar {
-  color: rgba(255, 255, 255, 0.92) !important;
-  border-right: 1px solid rgba(255, 255, 255, 0.12) !important;
-}
-
-/* If you had a glass gradient overlay anywhere */
-.map-sidebar::before,
-.map-sidebar::after {
-  content: none !important;
-}
+/* Shared map controls follow the application theme. */
+.map-sidebar, .map-sidebar-body { background: var(--surface); color: var(--text); }
+.map-sidebar-body { height: auto; }
+.input, .selectbox-menu { background: var(--surface-2); color: var(--text); border-color: var(--border); }
+.selectbox-value, .selectbox-search, .selectbox-item { color: var(--text); }
+.selectbox-search { border-color: var(--border); }
+.selectbox-search::placeholder { color: var(--muted); }
+.selectbox-item:hover, .selectbox-item.active, .selectbox-item.selected { background: var(--active); }
+.filters-reset-btn, .sidebar-edge-toggle { background: var(--surface-2); color: var(--text); border-color: var(--border); }
+.filters-reset-btn:hover { background: var(--active); }
