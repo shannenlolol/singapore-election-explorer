@@ -37,7 +37,7 @@ test('reference tables support pagination, search, and sort', async () => {
   render(<SummaryDashboard />);
   const section = await screen.findByRole('region', { name: 'Political parties' });
   assert.ok(within(section).getByText('Page 1 of 2'));
-  await user.click(within(section).getByRole('button', { name: 'Next' }));
+  await user.click(within(section).getByRole('button', { name: 'Page 2', exact: true }));
   assert.ok(within(section).getByText('P16'));
   await user.type(within(section).getByRole('searchbox', { name: 'Search political parties' }), 'Party 3');
   assert.ok(within(section).getByText('P03'));
