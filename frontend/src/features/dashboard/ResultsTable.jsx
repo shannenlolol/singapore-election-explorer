@@ -1,3 +1,4 @@
+import Pagination from "../../components/Pagination.jsx";
 import React from "react";
 import { useMemo, useState } from "react";
 import { partyColor } from "./summaryModel.js";
@@ -7,9 +8,10 @@ const columns = [["year", "Year"], ["constituency", "Constituency"], ["constitue
 const PAGE_SIZE = 14;
 export default function ResultsTable({ rows, selected, onSelect, partyNames }) {
   const [sort, setSort] = useState({ key: null, direction: "asc" });
+  const [pageSize, setPageSize] = useState(PAGE_SIZE);
   const [page, setPage] = useState(0);
   const sorted = useMemo(() => sortRows(rows, sort.key, sort.direction), [rows, sort]);
-  const pages = Math.max(1, Math.ceil(sorted.length / PAGE_SIZE));
+  const pages = Math.max(1, Math.ceil(sorted.length / pageSize));
   const currentPage = Math.min(page, pages - 1);
   function changeSort(key) {
     setSort(previous => ({ key, direction: previous.key === key && previous.direction === "asc" ? "desc" : "asc" }));
@@ -22,7 +24,7 @@ export default function ResultsTable({ rows, selected, onSelect, partyNames }) {
         <thead><tr>{columns.map(([key, label]) => <th key={key} scope="col" aria-sort={sort.key === key ? (sort.direction === "asc" ? "ascending" : "descending") : "none"}>
           <button onClick={() => changeSort(key)}>{label}{sort.key === key ? (sort.direction === "asc" ? " ↑" : " ↓") : " ↕"}</button>
         </th>)}</tr></thead>
-        <tbody>{sorted.slice(currentPage * PAGE_SIZE, (currentPage + 1) * PAGE_SIZE).map(row => <tr key={rowKey(row)} className={selected && rowKey(selected) === rowKey(row) ? "is-selected" : ""}>
+        <tbody>{sorted.slice(currentPage * pageSize, (currentPage + 1) * pageSize).map(row => <tr key={rowKey(row)} className={selected && rowKey(selected) === rowKey(row) ? "is-selected" : ""}>
           <td>{row.year}</td>
           <td><button className="constituency-link" aria-label={`View ${row.constituency} ${row.year} details`} aria-pressed={Boolean(selected && rowKey(selected) === rowKey(row))} onClick={event => onSelect(row, event.currentTarget)}>{row.constituency}</button></td>
           <td>{row.constituency_type || "—"}</td>
@@ -32,10 +34,6 @@ export default function ResultsTable({ rows, selected, onSelect, partyNames }) {
         </tr>)}</tbody>
       </table>
     </div>
-    <nav className="results-pagination" aria-label="Results pages">
-      <button disabled={currentPage === 0} onClick={() => setPage(currentPage - 1)}>Previous</button>
-      <span aria-live="polite">Page {currentPage + 1} of {pages}</span>
-      <button disabled={currentPage + 1 >= pages} onClick={() => setPage(currentPage + 1)}>Next</button>
-    </nav>
+    <Pagination total={rows.length} page={currentPage} pageSize={pageSize} onPageChange={setPage} onPageSizeChange={setPageSize} defaultSize={PAGE_SIZE} label="Results pages" />
   </>;
 }

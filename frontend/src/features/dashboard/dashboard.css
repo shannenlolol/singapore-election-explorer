@@ -149,3 +149,18 @@
   .ranked-bars li { grid-template-columns: 80px minmax(0, 1fr) 28px; gap: 8px; }
 }
 @media (prefers-reduced-motion: reduce) { .dashboard-page button { transition: none; } }
+
+.results-pagination { flex-wrap: wrap; gap: 14px; }
+.pagination-info { display: flex; flex-direction: column; gap: 5px; }
+.pagination-buttons { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+.pagination-buttons button { min-width: 32px; padding: 8px; }
+.pagination-buttons [aria-current="page"] { background: var(--active); border-color: var(--primary); color: var(--primary); font-weight: 750; }
+.page-size { display: flex; align-items: center; gap: 8px; }
+.page-size select { padding: 7px; font: inherit; }
+.chart-mark { position: relative; display: block; cursor: help; }
+.chart-tooltip { position: absolute; bottom: calc(100% + 8px); left: 0; z-index: 30; padding: 8px 10px; width: min(230px, calc(100vw - 24px)); background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 8px; box-shadow: var(--shadow); font-size: 12px; line-height: 1.5; font-weight: 600; white-space: normal; }
+.chart-tooltip::after { content: ""; position: absolute; top: 100%; left: 0; width: 100%; height: 10px; }
+.rank-track, .vote-track, .year-stack { overflow: visible; }
+.year-stack > .chart-mark { height: 100%; }
+.chart-mark:focus-visible { outline-offset: 3px; }
+@media (max-width: 650px) { .pagination-buttons { order: 3; width: 100%; justify-content: center; } }

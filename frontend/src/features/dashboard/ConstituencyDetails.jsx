@@ -1,3 +1,4 @@
+import ChartMark from "../../components/ChartMark.jsx";
 import React from "react";
 import { useEffect, useRef } from "react";
 import { partyColor } from "./summaryModel.js";
@@ -27,7 +28,7 @@ export default function ConstituencyDetails({ selected, onClose, partyNames }) {
         {!parties.length && <p>No party results available.</p>}
         <ul className="vote-bars">{parties.map(party => <li key={`${party.party}-${party.candidates}`}>
           <div><strong title={party.party_full_name || partyNames[party.party]}>{party.party}</strong>{parties.filter(other => other.party === party.party).length > 1 && <small>{party.candidates}</small>}<span>{formatNumber(party.vote_count)} votes · {formatPercent(party.vote_share, 2, 100)}</span></div>
-          <div className="vote-track" aria-hidden="true"><div style={{ background: partyColor(party.party), width: `${Math.max(0, Number(party.vote_count) || 0) / maxVotes * 100}%` }} /></div>
+          <ChartMark className="vote-track" label={`${party.party}: ${formatNumber(party.vote_count)} votes · ${formatPercent(party.vote_share, 2, 100)}`}><div style={{ background: partyColor(party.party), width: `${Math.max(0, Number(party.vote_count) || 0) / maxVotes * 100}%` }} /></ChartMark>
         </li>)}</ul>
         <h3>Elector statistics</h3>
         <p>Turnout: {formatPercent(data.turnout_pct, 2)}. Spoilt papers are cancelled or replaced and are excluded from turnout.</p>
