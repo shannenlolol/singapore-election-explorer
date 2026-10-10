@@ -5,7 +5,7 @@ import { partyColor } from "./summaryModel.js";
 import { formatPercent, rowKey, sortRows, splitParties } from "./model.js";
 
 const columns = [["year", "Year"], ["constituency", "Constituency"], ["constituency_type", "Type"], ["contesting_parties", "Contested"], ["winner_party", "Winner"], ["margin_pct", "Margin"]];
-const PAGE_SIZE = 14;
+const PAGE_SIZE = 10;
 export default function ResultsTable({ rows, selected, onSelect, partyNames }) {
   const [sort, setSort] = useState({ key: null, direction: "asc" });
   const [pageSize, setPageSize] = useState(PAGE_SIZE);
@@ -20,7 +20,7 @@ export default function ResultsTable({ rows, selected, onSelect, partyNames }) {
   return <>
     <div className="results-scroll">
       <table className="results-table">
-        <caption>Election results. Click a row to view candidates, votes, and elector statistics.</caption>
+        <caption className="visually-hidden">Election results</caption>
         <thead><tr>{columns.map(([key, label]) => <th key={key} scope="col" aria-sort={sort.key === key ? (sort.direction === "asc" ? "ascending" : "descending") : "none"}>
           <button onClick={() => changeSort(key)}>{label}{sort.key === key ? (sort.direction === "asc" ? " ↑" : " ↓") : " ↕"}</button>
         </th>)}</tr></thead>
@@ -29,7 +29,7 @@ export default function ResultsTable({ rows, selected, onSelect, partyNames }) {
           onSelect(row, event.currentTarget.querySelector('.constituency-link'));
         }} className={selected && rowKey(selected) === rowKey(row) ? "is-selected" : ""}>
           <td>{row.year}</td>
-          <td><button className="constituency-link" aria-label={`View ${row.constituency} ${row.year} details`} aria-pressed={Boolean(selected && rowKey(selected) === rowKey(row))} onClick={event => onSelect(row, event.currentTarget)}><span>{row.constituency}</span><small className="details-link-hint">View candidates &amp; results →</small></button></td>
+          <td><button className="constituency-link" aria-label={`View ${row.constituency} ${row.year} details`} aria-pressed={Boolean(selected && rowKey(selected) === rowKey(row))} onClick={event => onSelect(row, event.currentTarget)}><span>{row.constituency}</span></button></td>
           <td>{row.constituency_type || "—"}</td>
           <td>{splitParties(row.contesting_parties).map(party => <span className="search-party" style={{ "--party-color": partyColor(party) }} title={partyNames[party]} key={party}>{party}</span>)}</td>
           <td><span className="search-party" style={{ "--party-color": partyColor(row.winner_party) }} title={partyNames[row.winner_party]}>{row.winner_party || "—"}</span></td>

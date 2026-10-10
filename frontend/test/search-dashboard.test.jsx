@@ -41,7 +41,7 @@ test('loads results, pages, and keeps numeric sorting independent of display for
   await screen.findByRole('button', { name: 'View Aljunied 2025 details' });
   assert.ok(screen.getByText('Page 1 of 2'));
   await user.click(screen.getByRole('button', { name: 'Next', exact: true }));
-  assert.ok(screen.getByRole('button', { name: 'View Area 14 2025 details' }));
+  assert.ok(screen.getByRole('button', { name: 'View Area 10 2025 details' }));
   assert.equal(screen.queryByRole('button', { name: 'View Aljunied 2025 details' }), null);
   await user.click(screen.getByRole('button', { name: 'Margin ↕' }));
   const bodyRows = within(screen.getByRole('table')).getAllByRole('row');
@@ -56,7 +56,9 @@ test('selection loads matching details, preserves units and missing values, and 
   await user.click(trigger);
   const panel = await screen.findByRole('complementary', { name: 'Aljunied 2025' });
   await within(panel).findByText('79,254 votes · 59.71%');
+  await user.click(within(panel).getByText('Elector statistics', { selector: 'summary' }));
   assert.ok(within(panel).getByText('144,298'));
+  await user.click(within(panel).getByText('3 candidates'));
   assert.ok(within(panel).getByText('—'));
   for (const name of ['Alice', 'Bob', 'Carol']) assert.ok(within(panel).getByText(name));
   assert.equal(requests.some(path => path.includes('year=2025&constituency=Aljunied')), true);
@@ -139,8 +141,8 @@ test('detail panel distinguishes independent contestants and explains walkovers 
     await user.click(await screen.findByRole('button', { name: 'View Aljunied 2025 details' }));
     await screen.findByText('Tied vote totals: no winner is inferred.');
     const votes = document.querySelector('.vote-bars');
-    assert.ok(within(votes).getByText('Candidate One'));
-    assert.ok(within(votes).getByText('Candidate Two'));
+    assert.ok(within(votes).getByText('Candidate One', { selector: '.candidate-identity' }));
+    assert.ok(within(votes).getByText('Candidate Two', { selector: '.candidate-identity' }));
     cleanup();
     details.outcome = 'walkover';
     details.parties = [{ party: 'PAP', candidates: 'Team', vote_count: null, vote_share: null }];
@@ -161,6 +163,7 @@ test('clicking a result row opens its candidate details and closing returns to i
   const row = trigger.closest('tr');
   await user.click(within(row).getByText('GRC'));
   const panel = await screen.findByRole('complementary', { name: 'Aljunied 2025' });
+  await user.click(await within(panel).findByText('3 candidates'));
   await within(panel).findByText('Alice');
   assert.ok(within(panel).getByText('Bob'));
   assert.ok(within(panel).getByText('79,254 votes · 59.71%'));
@@ -168,4 +171,26 @@ test('clicking a result row opens its candidate details and closing returns to i
   assert.equal(document.activeElement, trigger);
   await user.keyboard('{Enter}');
   await screen.findByRole('complementary', { name: 'Aljunied 2025' });
+});
+
+
+test('candidate disclosures toggle and reset for a new constituency', async () => {
+  const user = userEvent.setup();
+  render(<SearchDashboard />);
+  await user.click(await screen.findByRole('button', { name: 'View Aljunied 2025 details' }));
+  const hint = await screen.findByText('3 candidates');
+  const disclosure = hint.closest('details');
+  assert.equal(disclosure.open, false);
+  await user.click(hint);
+  assert.equal(disclosure.open, true);
+  assert.deepEqual(within(disclosure).getAllByRole('listitem').map(item => item.textContent), ['Alice', 'Bob', 'Carol']);
+  await user.click(hint);
+  assert.equal(disclosure.open, false);
+  await user.click(hint);
+  await user.click(screen.getByRole('button', { name: 'View Area 1 2025 details' }));
+  assert.equal((await screen.findByText('3 candidates')).closest('details').open, false);
+  const close = screen.getByRole('button', { name: 'Close constituency details' });
+  assert.ok(close.querySelector('svg[aria-hidden="true"]'));
+  await user.click(close);
+  assert.equal(document.activeElement, screen.getByRole('button', { name: 'View Area 1 2025 details' }));
 });

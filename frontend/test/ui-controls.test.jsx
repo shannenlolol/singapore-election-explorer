@@ -41,13 +41,13 @@ test('numbered pagination jumps to pages and ends, changes size, and clamps smal
   const user = userEvent.setup();
   const { rerender } = render(<ResultsTable {...props} rows={rows} />);
   await user.click(screen.getByRole('button', { name: 'Page 2', exact: true }));
-  assert.ok(screen.getByRole('button', { name: 'View Area 14 2025 details' }));
+  assert.ok(screen.getByRole('button', { name: 'View Area 10 2025 details' }));
   assert.equal(screen.getByRole('button', { name: 'Page 2', exact: true }).getAttribute('aria-current'), 'page');
   await user.click(screen.getByRole('button', { name: 'Last page' }));
-  assert.ok(screen.getByText('99–100 of 100 results'));
+  assert.ok(screen.getByText('91–100 of 100 results'));
   assert.equal(screen.getByRole('button', { name: 'Next' }).disabled, true);
-  await user.selectOptions(screen.getByRole('combobox', { name: 'Rows per page' }), '28');
-  assert.ok(screen.getByText('Page 1 of 4'));
+  await user.selectOptions(screen.getByRole('combobox', { name: 'Rows per page' }), '20');
+  assert.ok(screen.getByText('Page 1 of 5'));
   await user.click(screen.getByRole('button', { name: 'Last page' }));
   rerender(<ResultsTable {...props} rows={rows.slice(0, 3)} />);
   assert.ok(screen.getByText('1–3 of 3 results'));

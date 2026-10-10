@@ -7,16 +7,16 @@ export default function SummaryCharts({ summary }) {
   const maxYear = Math.max(1, ...summary.yearly.map(item => item.total));
   return <div className="summary-chart-grid">
     <section className="summary-card" aria-labelledby="overall-heading">
-      <div className="section-heading"><div><span className="eyebrow">Across all election years</span><h2 id="overall-heading">Constituencies won by party</h2></div></div>
-      <p className="search-muted">One win per constituency per election. Top 12 parties; remaining parties grouped as Others.</p>
+      <div className="section-heading"><div><h2 id="overall-heading">Constituencies won by party</h2></div></div>
+      <p className="search-muted">All years{summary.bars.some(item => item.party === "Others") ? " · Top 12 parties; the rest in Others" : ""}</p>
       <ol className="ranked-bars">{summary.bars.map(item => <li key={item.party}>
         <span className="rank-label"><i style={{ background: partyColor(item.party) }} aria-hidden="true" />{item.party === "—" ? "Unknown" : item.party}</span>
         <ChartMark className="rank-track" label={`${item.party === "—" ? "Unknown" : item.party}: ${item.count} constituencies won`}><div style={{ width: `${item.count / maxOverall * 100}%`, background: partyColor(item.party) }} /></ChartMark><strong>{item.count}</strong>
       </li>)}</ol>
     </section>
     <section className="summary-card" aria-labelledby="yearly-heading">
-      <div className="section-heading"><div><span className="eyebrow">Historical comparison</span><h2 id="yearly-heading">Constituency wins by year</h2></div></div>
-      <p className="search-muted">Bar lengths show constituency counts, not parliamentary seats.</p>
+      <div className="section-heading"><div><h2 id="yearly-heading">Constituency wins by year</h2></div></div>
+      <p className="search-muted">By election year</p>
       <div className="yearly-bars" role="group" aria-label="Constituency wins by year">{summary.yearly.map(row => <div className="yearly-row" key={row.year}>
         <span>{row.year}</span><div className="year-track"><div className="year-stack" style={{ width: `${row.total / maxYear * 100}%` }}>{summary.parties.filter(party => row.counts[party]).map(party => <ChartMark key={party} label={`${row.year} · ${party === "—" ? "Unknown" : party}: ${row.counts[party]} constituencies won`} style={{ width: `${row.counts[party] / row.total * 100}%`, background: partyColor(party) }} />)}</div></div><strong>{row.total}</strong>
       </div>)}</div>

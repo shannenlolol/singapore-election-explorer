@@ -29,18 +29,18 @@ export default function SearchDashboard() {
   function updateFilter(key, values) { setFilters(previous => ({ ...previous, [key]: values })); setSelected(null); }
   const rows = results.data?.rows || [];
   return <section aria-label="Search election results">
-    <div className="search-panel-heading"><div><span className="eyebrow">Find your constituency</span><h2>Explore election results</h2><p className="search-muted">Compare constituencies, parties, and election years.</p></div>
+    <div className="search-panel-heading"><h2>Filter results</h2>
       <button onClick={() => { setFilters(emptyFilters()); setSelected(null); }}>Reset filters</button>
     </div>
     {options.loading && <p role="status">Loading search filters…</p>}
     {options.error && <div role="alert"><p>{options.error}</p><button onClick={options.retry}>Retry filters</button></div>}
     {options.data && <>
       <div className="search-filters">{[["years", "Year"], ["contesting", "Contesting party"], ["winners", "Winner party"], ["types", "Constituency type"], ["constituencies", "Constituency"]].map(([key, label]) => <MultiFilter key={key} label={label} options={filterOptions[key]} selected={filters[key]} onChange={values => updateFilter(key, values)} />)}</div>
-      <p className="search-muted">No selection means all. Multiple selections match any value within a filter.</p>
+
       {results.loading && <p role="status">Loading election results…</p>}
       {results.error && <div role="alert"><p>{results.error}</p><button onClick={results.retry}>Retry results</button></div>}
       {results.data && <>
-        <p role="status">Matched entries: <strong>{rows.length}</strong></p>
+        <div className="results-heading"><p role="status"><strong>{rows.length}</strong> results</p><span className="search-muted">Select a row for details</span></div>
         {rows.length >= 800 && <p className="search-muted">Showing up to 800 results. Narrow the filters to see more specific matches.</p>}
         {!rows.length ? <div className="card-surface"><h2>No matching elections</h2><p>Try clearing a filter or resetting your search.</p></div> : <div className={`search-content${selected ? " has-details" : ""}`}>
           <div className="card-surface search-results"><ResultsTable key={query} rows={rows} selected={selected} partyNames={partyNames} onSelect={(row, element) => { trigger.current = element; setSelected(row); }} /></div>

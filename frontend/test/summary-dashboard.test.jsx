@@ -30,11 +30,13 @@ test('renders React charts and exact yearly values without an iframe', async () 
   assert.deepEqual(within(tableRows[0]).getAllByRole('columnheader').map(cell => cell.textContent), ['Year', 'PAP', 'WP', 'Total']);
   assert.deepEqual(within(tableRows[1]).getAllByRole('cell').map(cell => cell.textContent), ['0', '1', '1']);
   assert.deepEqual(within(tableRows[2]).getAllByRole('cell').map(cell => cell.textContent), ['1', '1', '2']);
+  await user.click(await screen.findByText('Election dates', { selector: 'summary' }));
   assert.ok(screen.getByText('23 Apr 2025'));
 });
 test('reference tables support pagination, search, and sort', async () => {
   const user = userEvent.setup();
   render(<SummaryDashboard />);
+  await user.click(await screen.findByText('Political parties', { selector: 'summary' }));
   const section = await screen.findByRole('region', { name: 'Political parties' });
   assert.ok(within(section).getByText('Page 1 of 2'));
   await user.click(within(section).getByRole('button', { name: 'Page 2', exact: true }));
@@ -51,6 +53,7 @@ test('empty results show an honest empty state while reference data remains avai
   rows = [];
   render(<SummaryDashboard />);
   await screen.findByRole('heading', { name: 'No election results yet' });
+  await userEvent.setup().click(await screen.findByText('Election dates', { selector: 'summary' }));
   assert.ok(await screen.findByRole('table', { name: 'Election dates' }));
   assert.equal(screen.queryByRole('heading', { name: 'Constituencies won by party' }), null);
 });
@@ -59,6 +62,7 @@ test('summary failure retries independently from reference data', async () => {
   failResults = true;
   render(<SummaryDashboard />);
   await screen.findByRole('heading', { name: 'Summary unavailable' });
+  await user.click(await screen.findByText('Political parties', { selector: 'summary' }));
   assert.ok(await screen.findByRole('table', { name: 'Political parties' }));
   failResults = false;
   await user.click(screen.getByRole('button', { name: 'Retry summary' }));
@@ -72,10 +76,26 @@ test('reference failures retry independently from loaded charts', async () => {
   await screen.findByRole('button', { name: 'Retry reference tables' });
   failOptions = false;
   await user.click(screen.getByRole('button', { name: 'Retry reference tables' }));
+  await user.click(await screen.findByText('Election dates', { selector: 'summary' }));
   await screen.findByRole('table', { name: 'Election dates' });
 });
 test('the API result cap is disclosed rather than presented as a complete history', async () => {
   rows = Array.from({ length: 800 }, () => ({ year: 2025, winner_party: 'PAP' }));
   render(<SummaryDashboard />);
   await screen.findByText('This summary covers the API’s first 800 results and may be incomplete.');
+});
+
+
+test('reference tables start folded and retain their controls when reopened', async () => {
+  const user = userEvent.setup();
+  render(<SummaryDashboard />);
+  const toggle = await screen.findByText('Political parties', { selector: 'summary' });
+  assert.equal(toggle.closest('details').open, false);
+  await user.click(toggle);
+  await user.type(screen.getByRole('searchbox', { name: 'Search political parties' }), 'Party 3');
+  await user.click(toggle);
+  assert.equal(toggle.closest('details').open, false);
+  await user.click(toggle);
+  assert.equal(screen.getByRole('searchbox', { name: 'Search political parties' }).value, 'Party 3');
+  assert.ok(screen.getByText('P03'));
 });

@@ -11,11 +11,11 @@ export default function SummaryDashboard() {
   const options = useResource("/api/dashboard/options");
   const summary = useMemo(() => summarizeResults(results.data?.rows || []), [results.data]);
   return <section aria-label="Election summary">
-    <div className="search-panel-heading"><div><span className="eyebrow">The bigger picture</span><h2>Election history. A wider perspective.</h2><p className="search-muted">Explore recorded constituency wins over time. Counts reflect available source records, not parliamentary seats or a complete election tally.</p></div></div>
+    <div className="search-panel-heading"><div><h2>At a glance</h2><p className="search-muted">Recorded constituency wins, not seats. Source coverage is incomplete.</p></div></div>
     {results.loading && <div className="summary-card" role="status">Loading election summary…</div>}
     {results.error && <div className="summary-card" role="alert"><h3>Summary unavailable</h3><p>{results.error}</p><button onClick={results.retry}>Retry summary</button></div>}
     {results.data && (summary.total ? <>
-      <div className="summary-metrics">{[["Constituency results", summary.total, "Across the loaded election records"], ["Election years", summary.yearly.length, summary.yearly.length ? `${summary.yearly[0].year}–${summary.yearly.at(-1).year}` : "No valid years"], ["Winning parties", summary.ranked.filter(item => item.party !== "—").length, "Parties with at least one recorded win"]].map(([label, value, note]) => <div className="summary-card metric-card" key={label}><span>{label}</span><strong>{value.toLocaleString("en-SG")}</strong><small>{note}</small></div>)}</div>
+      <div className="summary-metrics">{[["Constituency results", summary.total, null], ["Election years", summary.yearly.length, summary.yearly.length ? `${summary.yearly[0].year}–${summary.yearly.at(-1).year}` : "No valid years"], ["Winning parties", summary.ranked.filter(item => item.party !== "—").length, null]].map(([label, value, note]) => <div className="summary-card metric-card" key={label}><span>{label}</span><strong>{value.toLocaleString("en-SG")}</strong>{note && <small>{note}</small>}</div>)}</div>
       {summary.total >= 800 && <p role="status" className="data-notice">This summary covers the API’s first 800 results and may be incomplete.</p>}
       {summary.unknownYears > 0 && <p className="data-notice">{summary.unknownYears} results have no valid year and are excluded from the yearly chart.</p>}
       <SummaryCharts summary={summary} />
@@ -23,8 +23,8 @@ export default function SummaryDashboard() {
     {options.loading && <p role="status">Loading reference tables…</p>}
     {options.error && <div role="alert" className="summary-card"><p>{options.error}</p><button onClick={options.retry}>Retry reference tables</button></div>}
     {options.data && <div className="summary-reference-grid">
-      <ReferenceTable title="Election dates" rows={options.data.election_dates || []} columns={dateColumns} rowId="year" initialSort="year" />
-      <ReferenceTable title="Political parties" rows={options.data.parties || []} columns={partyColumns} rowId="abbreviation" initialSort="abbreviation" />
+      <details className="reference-disclosure"><summary>Election dates</summary><ReferenceTable title="Election dates" rows={options.data.election_dates || []} columns={dateColumns} rowId="year" initialSort="year" /></details>
+      <details className="reference-disclosure"><summary>Political parties</summary><ReferenceTable title="Political parties" rows={options.data.parties || []} columns={partyColumns} rowId="abbreviation" initialSort="abbreviation" /></details>
     </div>}
   </section>;
 }
