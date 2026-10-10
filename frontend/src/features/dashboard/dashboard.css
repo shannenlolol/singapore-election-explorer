@@ -203,10 +203,10 @@
 .candidate-party { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .candidate-group[open] .candidate-party svg { transform: rotate(180deg); }
 .candidate-votes, .candidate-identity, .candidate-hint { display: block; font-size: 12px; margin-top: 6px; }
-.candidate-hint { color: var(--primary); }
+.candidate-hint { color: var(--text); }
 .candidate-list { border-top: 1px solid var(--border); padding: 12px; }
 .candidate-list p { margin: 0 0 8px; font-size: 12px; color: var(--muted); }
-.elector-disclosure summary { cursor: pointer; color: var(--primary); font-size: 13px; margin-bottom: 12px; }
+
 .reference-disclosure { min-width: 0; border: 1px solid var(--border); border-radius: 14px; background: var(--surface); }
 .reference-disclosure > summary { cursor: pointer; padding: 18px 20px; font-size: 14px; font-weight: 600; }
 .reference-disclosure .summary-card { border: 0; border-top: 1px solid var(--border); box-shadow: none; border-radius: 0 0 14px 14px; }
@@ -215,3 +215,7 @@
   .dashboard-page .search-details { contain: none; overflow: visible; }
   .detail-body { overflow: visible; }
 }
+
+.candidate-group .candidate-profiles { list-style: none; padding: 0; display: grid; gap: 10px; }
+.candidate-group .candidate-profiles li { display: flex; align-items: center; gap: 12px; padding: 0; }
+.candidate-avatar { display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; flex: 0 0 44px; border-radius: 50%; background: var(--surface); border: 1px solid var(--border); color: var(--muted); }

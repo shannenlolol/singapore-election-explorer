@@ -56,10 +56,9 @@ test('selection loads matching details, preserves units and missing values, and 
   await user.click(trigger);
   const panel = await screen.findByRole('complementary', { name: 'Aljunied 2025' });
   await within(panel).findByText('79,254 votes · 59.71%');
-  await user.click(within(panel).getByText('Elector statistics', { selector: 'summary' }));
   assert.ok(within(panel).getByText('144,298'));
   await user.click(within(panel).getByText('3 candidates'));
-  assert.ok(within(panel).getByText('—'));
+  assert.ok(within(panel).getAllByText('—').length > 0);
   for (const name of ['Alice', 'Bob', 'Carol']) assert.ok(within(panel).getByText(name));
   assert.equal(requests.some(path => path.includes('year=2025&constituency=Aljunied')), true);
   await user.keyboard('{Escape}');
@@ -193,4 +192,23 @@ test('candidate disclosures toggle and reset for a new constituency', async () =
   assert.ok(close.querySelector('svg[aria-hidden="true"]'));
   await user.click(close);
   assert.equal(document.activeElement, screen.getByRole('button', { name: 'View Area 1 2025 details' }));
+});
+
+
+test('elector statistics remain visible before party results and profiles use neutral placeholders', async () => {
+  const user = userEvent.setup();
+  render(<SearchDashboard />);
+  await user.click(await screen.findByRole('button', { name: 'View Aljunied 2025 details' }));
+  const panel = screen.getByRole('complementary', { name: 'Aljunied 2025' });
+  const electors = await within(panel).findByRole('region', { name: 'Elector statistics' });
+  assert.equal(electors.closest('details'), null);
+  assert.deepEqual([...electors.querySelectorAll('dt')].map(item => item.textContent), ['Registered electors', 'Turnout', 'Rejected votes', 'Spoilt ballot papers']);
+  assert.equal(electors.querySelector('dd').textContent, '144,298');
+  const headings = within(panel).getAllByRole('heading', { level: 3 }).map(item => item.textContent);
+  assert.deepEqual(headings, ['Elector statistics', 'Votes & candidates']);
+  await user.click(within(panel).getByText('3 candidates'));
+  const profiles = panel.querySelector('.candidate-profiles');
+  assert.deepEqual(within(profiles).getAllByRole('listitem').map(item => item.textContent), ['Alice', 'Bob', 'Carol']);
+  assert.equal(profiles.querySelectorAll('.candidate-avatar[aria-hidden="true"]').length, 3);
+  assert.equal(profiles.querySelectorAll('img').length, 0);
 });

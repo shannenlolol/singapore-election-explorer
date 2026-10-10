@@ -1,6 +1,6 @@
 import ChartMark from "../../components/ChartMark.jsx";
 import React, { useEffect, useRef } from "react";
-import { ChevronDown, X } from "lucide-react";
+import { ChevronDown, UserRound, X } from "lucide-react";
 import { partyColor } from "./summaryModel.js";
 import { useResource } from "./useResource.js";
 import { formatNumber, formatPercent, splitCandidates } from "./model.js";
@@ -25,6 +25,17 @@ export default function ConstituencyDetails({ selected, onClose, partyNames }) {
           {data.outcome === "walkover" && <p>Uncontested return (walkover): one contestant and no vote totals are recorded in the source.</p>}
           {data.outcome === "tie" && <p>Tied vote totals: no winner is inferred.</p>}
           {data.outcome === "unavailable" && <p>Incomplete vote data: winner and vote shares are unavailable.</p>}
+          <section className="detail-section" aria-labelledby="detail-electors-heading">
+            <h3 id="detail-electors-heading">Elector statistics</h3>
+            <dl className="elector-stats">
+              <div><dt>Registered electors</dt><dd>{formatNumber(data.elector?.no_of_registered_electors)}</dd></div>
+              <div><dt>Turnout</dt><dd>{formatPercent(data.turnout_pct, 2)}</dd></div>
+              <div><dt>Rejected votes</dt><dd>{formatNumber(data.elector?.no_of_rejected_votes)}</dd></div>
+              <div><dt>Spoilt ballot papers</dt><dd>{formatNumber(data.elector?.no_of_spoilt_ballot_papers)}</dd></div>
+            </dl>
+            {!data.elector && <p className="detail-note">No elector statistics available.</p>}
+            <p className="detail-note">Spoilt papers are replaced or cancelled; they do not count towards turnout.</p>
+          </section>
           <section className="detail-section" aria-labelledby="detail-votes-heading">
             <h3 id="detail-votes-heading">Votes &amp; candidates</h3>
             {!parties.length && <p>No party results available.</p>}
@@ -41,24 +52,14 @@ export default function ConstituencyDetails({ selected, onClose, partyNames }) {
                   </summary>
                   <div className="candidate-list">
                     <p>{party.party_full_name || partyNames[party.party] || party.party}</p>
-                    {names.length ? <ul>{names.map((name, index) => <li key={`${name}-${index}`}>{name}</li>)}</ul> : <p>No candidate names available.</p>}
+                    {names.length ? <ul className="candidate-profiles">{names.map((name, index) => <li key={`${name}-${index}`}><span className="candidate-avatar" aria-hidden="true"><UserRound size={24} /></span><span>{name}</span></li>)}</ul> : <p>No candidate names available.</p>}
                   </div>
                 </details>
                 <ChartMark className="vote-track" label={`${party.party}${repeatedParty ? ` · ${party.candidates}` : ""}: ${formatNumber(party.vote_count)} votes · ${formatPercent(party.vote_share, 2, 100)}`}><div style={{ background: partyColor(party.party), width: `${Math.max(0, Number(party.vote_count) || 0) / maxVotes * 100}%` }} /></ChartMark>
               </li>;
             })}</ul>
           </section>
-          <section className="detail-section" aria-label="Elector statistics">
-            <p className="detail-turnout">Turnout: {formatPercent(data.turnout_pct, 2)}</p>
-            <details className="elector-disclosure"><summary>Elector statistics</summary>
-              {data.elector ? <dl className="elector-stats">{[
-                ["Registered electors", "no_of_registered_electors"],
-                ["Rejected votes", "no_of_rejected_votes"],
-                ["Spoilt ballot papers", "no_of_spoilt_ballot_papers"],
-              ].map(([label, key]) => <div key={key}><dt>{label}</dt><dd>{formatNumber(data.elector[key])}</dd></div>)}</dl> : <p>No elector statistics available.</p>}
-              <p className="detail-note">Spoilt papers are cancelled or replaced and are excluded from turnout.</p>
-            </details>
-          </section>
+
         </>}
       </div>
     </aside>
