@@ -130,6 +130,7 @@ Open **http://localhost:5173**. Vite forwards `/api` to the local API on port 40
 
 ### Troubleshooting
 
+- **CARTO watermark in Simple map:** set `VITE_CARTO_BASEMAP_API_KEY` in the root `.env` for Docker, then run `docker compose up -d --build --no-deps frontend`. For Vite development, set it in `frontend/.env.local` and restart Vite. Request a [CARTO Basemaps key](https://www.carto.com/basemaps/apikey/) and configure website restrictions for your host. This browser-visible key is embedded at build time; restarting a container alone does not update it. Hard-refresh the page after rebuilding.
 - **Unhealthy API/database:** use `docker compose ps` and `docker compose logs api mysql`; verify credentials match the existing volume.
 - **Empty results:** a new database needs the explicit import command. Check the import output if it fails.
 - **Port already in use:** change `WEB_PORT` for Docker or stop the existing local process. MySQL is published only by the development override.

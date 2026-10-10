@@ -44,7 +44,10 @@ services:
       start_period: 10s
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      args:
+        VITE_CARTO_BASEMAP_API_KEY: ${VITE_CARTO_BASEMAP_API_KEY:-}
     restart: unless-stopped
     ports:
       - "127.0.0.1:${WEB_PORT:-8080}:8080"

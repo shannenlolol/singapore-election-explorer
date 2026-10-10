@@ -915,11 +915,14 @@ export default function MapPage() {
   );
 
 
-  // NEW: tile URLs
+  // "Default" base layer
   const TILE_DEFAULT = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
 
-  // "Simple" base layer: Carto light without labels (cleaner). If you prefer another, swap URL.
-  const TILE_SIMPLE = "https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png";
+  // "Simple" base layer
+  const cartoKey = import.meta.env.VITE_CARTO_BASEMAP_API_KEY;
+  const TILE_SIMPLE =
+    `https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png?key=${encodeURIComponent(cartoKey)}`;
+
   const tileUrl = baseMapStyle === "simple" ? TILE_SIMPLE : TILE_DEFAULT;
 
   return (
