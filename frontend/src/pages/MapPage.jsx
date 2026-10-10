@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { MapContainer, TileLayer, GeoJSON, useMap } from "react-leaflet";
 import L from "leaflet";
 import { getWinnerPct, formatVotePct } from "../features/map/resultModel.js";
+import { normaliseConstituencyKey, getBoundaryName, getBoundaryResult, getBoundaryType } from "../features/map/boundaryModel.js";
 
 function upperTrim(value) {
   return String(value || "").trim().toUpperCase();
@@ -38,28 +39,6 @@ function fitToGeo(map, geojson, leftInsetPx, transitionMs, shouldAnimate) {
     duration: durationSec,
     maxZoom: 12,
   });
-}
-
-function normaliseConstituencyKey(value) {
-  return String(value || "")
-    .trim()
-    .toUpperCase()
-    .replace(/[–—]/g, "-")
-    .replace(/\s+/g, " ");
-}
-
-function getBoundaryName(properties) {
-  if (properties && properties.ED_DESC_FU) return String(properties.ED_DESC_FU);
-  if (properties && properties.ED_DESC) return String(properties.ED_DESC);
-  if (properties && properties.Name) return String(properties.Name);
-  return "Unknown";
-}
-
-function getBoundaryTypeFromName(properties) {
-  const name = upperTrim(getBoundaryName(properties));
-  if (name.endsWith(" SMC")) return "SMC";
-  if (name.endsWith(" GRC")) return "GRC";
-  return "";
 }
 
 function clamp01(x) {
@@ -716,9 +695,8 @@ export default function MapPage() {
         const props = f && f.properties ? f.properties : {};
         const displayName = getBoundaryName(props);
         const nameKey = normaliseConstituencyKey(displayName);
-        const inferredType = getBoundaryTypeFromName(props);
-
-        const entry = activeSummary.get(nameKey) || null;
+        const entry = getBoundaryResult(props, activeSummary);
+        const inferredType = getBoundaryType(props, entry);
 
         if (q && nameKey.indexOf(q) === -1) {
           return false;
@@ -813,10 +791,7 @@ export default function MapPage() {
     function () {
       return function (feature) {
         const props = feature && feature.properties ? feature.properties : {};
-        const displayName = getBoundaryName(props);
-        const nameKey = normaliseConstituencyKey(displayName);
-
-        const entry = activeSummary.get(nameKey) || null;
+        const entry = getBoundaryResult(props, activeSummary);
         const winner = entry && entry.winnerParty ? String(entry.winnerParty) : "";
 
         const baseFill = winner ? colourForParty(winner) : "#ffffff";
@@ -843,10 +818,8 @@ export default function MapPage() {
     const props = feature && feature.properties ? feature.properties : {};
     const displayName = getBoundaryName(props);
 
-    const nameKey = normaliseConstituencyKey(displayName);
-    const inferredType = getBoundaryTypeFromName(props);
-
-    const entry = activeSummary.get(nameKey) || null;
+    const entry = getBoundaryResult(props, activeSummary);
+    const inferredType = getBoundaryType(props, entry);
     const winner = entry && entry.winnerParty ? String(entry.winnerParty) : "Unknown";
 
     let partyLinesHtml = "";
