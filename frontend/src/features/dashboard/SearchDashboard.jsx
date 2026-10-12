@@ -40,7 +40,7 @@ export default function SearchDashboard() {
       {results.loading && <p role="status">Loading election results…</p>}
       {results.error && <div role="alert"><p>{results.error}</p><button onClick={results.retry}>Retry results</button></div>}
       {results.data && <>
-        <div className="results-heading"><p role="status"><strong>{rows.length}</strong> results</p><span className="search-muted">Select a row for details</span></div>
+        <div className="results-heading"><p role="status"><strong>{rows.length}</strong> results</p></div>
         {rows.length >= 800 && <p className="search-muted">Showing up to 800 results. Narrow the filters to see more specific matches.</p>}
         {!rows.length ? <div className="card-surface"><h2>No matching elections</h2><p>Try clearing a filter or resetting your search.</p></div> : <div className={`search-content${selected ? " has-details" : ""}`}>
           <div className="card-surface search-results"><ResultsTable key={query} rows={rows} selected={selected} partyNames={partyNames} onSelect={(row, element) => { trigger.current = element; setSelected(row); }} /></div>

@@ -11,7 +11,7 @@ export default function SummaryDashboard() {
   const options = useResource("/api/dashboard/options");
   const summary = useMemo(() => summarizeResults(results.data?.rows || []), [results.data]);
   return <section aria-label="Election summary">
-    <div className="search-panel-heading"><div><h2>At a glance</h2><p className="search-muted">Recorded constituency wins, not seats. Source coverage is incomplete.</p></div></div>
+    <div className="search-panel-heading"><div><h2>At a glance</h2><p className="search-muted">Recorded constituency wins, not seats.</p></div></div>
     {results.loading && <div className="summary-card" role="status">Loading election summary…</div>}
     {results.error && <div className="summary-card" role="alert"><h3>Summary unavailable</h3><p>{results.error}</p><button onClick={results.retry}>Retry summary</button></div>}
     {results.data && (summary.total ? <>
