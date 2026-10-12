@@ -1,0 +1,15 @@
+{
+  "updatedAt": "2026-10-12T09:51:44.546Z",
+  "contentHash": "50c79a44f1d1319e29c635ab6565e366e93db1663c1b327d1f07c35fc947c6a0",
+  "boundaryYears": [
+    2025,
+    2020,
+    2015,
+    2011,
+    2006
+  ],
+  "source": {
+    "name": "data.gov.sg",
+    "url": "https://data.gov.sg/"
+  }
+}
