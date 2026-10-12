@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildMapSummary, buildMeta, buildOptions, buildResults, constituencyKey, formatJson, hashFiles, normaliseCandidateRows, shrinkGeoJson } from '../scripts/lib/staticData.mjs';
+import { readFileSync } from 'node:fs';
+import { buildMapSummary, buildMeta, buildOptions, buildResults, constituencyKey, formatJson, hashFiles, mergeManualAdditions, normaliseCandidateRows, shrinkGeoJson } from '../scripts/lib/staticData.mjs';
 
 // Raw records arrive from data.gov.sg as strings, with "na" types for older years.
 const source = [
@@ -120,4 +121,45 @@ test('boundaries are rounded to 5 dp with duplicate points and unused properties
 test('a boundary that collapses entirely is an error, not a silent gap on the map', () => {
   const sliver = [[103.1, 1.1], [103.100001, 1.1], [103.1, 1.100001], [103.1, 1.1]];
   assert.throws(() => shrinkGeoJson({ type: 'FeatureCollection', features: [{ properties: { Name: 'TINY' }, geometry: { type: 'Polygon', coordinates: [sliver] } }] }), /TINY/);
+});
+
+const walkover = { year: 2025, constituency: 'Marine Parade-Braddell Heights', constituency_type: 'GRC', candidates: 'Team PAP', party: 'PAP', vote_count: null, source: 'https://www.eld.gov.sg/finalresults2025.html' };
+// The shared fixture already contains this contest, so these tests start without it.
+const sourceWithoutWalkover = source.filter(record => !record.constituency.startsWith('Marine Parade'));
+const walkoverElectors = { year: 2025, constituency: 'Marine Parade-Braddell Heights', no_of_registered_electors: 131820, source: 'https://www.eld.gov.sg/finalresults2025.html' };
+
+test('a manual addition fills a contest missing from the source', () => {
+  const merged = mergeManualAdditions({ resultRecords: sourceWithoutWalkover, electorRecords: electors }, { results: [walkover], electors: [walkoverElectors] });
+  const row = buildResults(normaliseCandidateRows(merged.resultRecords), merged.electorRecords).find(result => result.constituency === walkover.constituency);
+  assert.equal(row.outcome, 'walkover');
+  assert.equal(row.winner_party, 'PAP');
+  assert.equal(row.elector.no_of_registered_electors, 131820);
+  assert.equal(buildMapSummary([row], 2025).summary['MARINE PARADE-BRADDELL HEIGHTS GRC'].outcome, 'walkover');
+});
+
+test('once the source publishes a contest, its rows win and the stale addition is dropped from the file', () => {
+  const published = [...sourceWithoutWalkover, { year: '2025', constituency: 'MARINE PARADE-BRADDELL HEIGHTS ', candidates: 'Official team', party: 'PAP', vote_count: 'na' }];
+  const additions = { description: 'kept', results: [walkover], electors: [walkoverElectors] };
+  const merged = mergeManualAdditions({ resultRecords: published, electorRecords: electors }, additions);
+  // Never mixed: only the official row for that contest survives.
+  const rows = normaliseCandidateRows(merged.resultRecords).filter(row => row.constituency.toUpperCase().startsWith('MARINE PARADE'));
+  assert.deepEqual(rows.map(row => row.candidates), ['Official team']);
+  assert.deepEqual(merged.stale, ['results for 2025 Marine Parade-Braddell Heights']);
+  // Results and electors go stale independently; the file keeps everything else as it was.
+  assert.deepEqual(merged.remaining, { description: 'kept', results: [], electors: [walkoverElectors] });
+  assert.deepEqual(additions.results, [walkover]);
+});
+
+test('a manual addition must cite a source', () => {
+  assert.throws(() => mergeManualAdditions({ resultRecords: source, electorRecords: [] }, { results: [{ ...walkover, source: ' ' }], electors: [] }), /must cite a source/);
+});
+
+test('the committed manual-additions.json is valid and only adds missing contests', () => {
+  const additions = JSON.parse(readFileSync(new URL('../scripts/manual-additions.json', import.meta.url), 'utf8'));
+  const merged = mergeManualAdditions({ resultRecords: sourceWithoutWalkover, electorRecords: electors }, additions);
+  assert.equal(normaliseCandidateRows(merged.resultRecords).length, normaliseCandidateRows(sourceWithoutWalkover).length + additions.results.length);
+  assert.deepEqual(merged.stale, []);
+  // The build rewrites this file when pruning, so its hand-written layout must match JSON.stringify.
+  assert.equal(readFileSync(new URL('../scripts/manual-additions.json', import.meta.url), 'utf8'), `${JSON.stringify(additions, null, 2)}\n`);
+  for (const addition of [...additions.results, ...additions.electors]) assert.match(addition.source, /^https:\/\/www\.eld\.gov\.sg\//);
 });

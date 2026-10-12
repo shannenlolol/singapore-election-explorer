@@ -1,0 +1,26 @@
+{
+  "description": "Contests missing from the data.gov.sg datasets, merged in by build_static_data.mjs. Each entry uses the same fields as the source dataset and must cite an official source. The build fails if data.gov.sg starts publishing the same contest, so remove the entry when that happens.",
+  "results": [
+    {
+      "year": 2025,
+      "constituency": "Marine Parade-Braddell Heights",
+      "constituency_type": "GRC",
+      "candidates": "Diana Pang Li Yen | Goh Pei Ming | Muhammad Faishal Ibrahim | Seah Kian Peng | Tin Pei Ling",
+      "party": "PAP",
+      "vote_count": null,
+      "source": "https://www.eld.gov.sg/finalresults2025.html",
+      "note": "Uncontested (walkover). Missing from data.gov.sg results dataset d_581a30bee57fa7d8383d6bc94739ad00 as of 12 Oct 2026."
+    }
+  ],
+  "electors": [
+    {
+      "year": 2025,
+      "constituency": "Marine Parade-Braddell Heights",
+      "no_of_registered_electors": 131820,
+      "no_of_rejected_votes": null,
+      "no_of_spoilt_ballot_papers": null,
+      "source": "https://www.eld.gov.sg/finalresults2025.html",
+      "note": "No votes were cast, so rejected and spoilt counts do not apply. Missing from data.gov.sg electors dataset d_fdfb854fcb7428b29734d2e0c0674220 as of 12 Oct 2026."
+    }
+  ]
+}

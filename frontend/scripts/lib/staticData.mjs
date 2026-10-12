@@ -36,6 +36,36 @@ export function normaliseCandidateRows(records) {
   return [...rows.values()];
 }
 
+// Adds hand-entered contests (scripts/manual-additions.json) to the raw source records.
+// An addition is all-or-nothing per contest. Once the source has any row for that year and
+// constituency, the official data wins: the addition is skipped (never mixed in) and
+// reported as stale, and `remaining` is the additions file without it.
+// Authoring mistakes (no year, constituency or source) still throw.
+export function mergeManualAdditions(source, additions) {
+  const contestKey = record => JSON.stringify([toInt(record.year), text(record.constituency).toUpperCase()]);
+  const stale = [];
+  const merge = (records, extra = [], label) => {
+    const existing = new Set(records.map(contestKey));
+    const kept = [];
+    for (const addition of extra) {
+      const name = `${addition.year} ${addition.constituency}`;
+      if (!toInt(addition.year) || !text(addition.constituency)) throw new Error(`Manual ${label} addition is missing a year or constituency.`);
+      if (!text(addition.source)) throw new Error(`Manual ${label} addition for ${name} must cite a source.`);
+      if (existing.has(contestKey(addition))) stale.push(`${label} for ${name}`);
+      else kept.push(addition);
+    }
+    return kept;
+  };
+  const results = merge(source.resultRecords, additions.results, "results");
+  const electors = merge(source.electorRecords, additions.electors, "elector statistics");
+  return {
+    resultRecords: [...source.resultRecords, ...results],
+    electorRecords: [...source.electorRecords, ...electors],
+    stale,
+    remaining: { ...additions, results, electors },
+  };
+}
+
 export function normaliseElectorRecords(records) {
   const electors = new Map();
   for (const record of records) {
