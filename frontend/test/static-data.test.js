@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildMapSummary, buildMeta, buildOptions, buildResults, constituencyKey, formatJson, hashFiles, normaliseCandidateRows } from '../scripts/lib/staticData.mjs';
+import { buildMapSummary, buildMeta, buildOptions, buildResults, constituencyKey, formatJson, hashFiles, normaliseCandidateRows, shrinkGeoJson } from '../scripts/lib/staticData.mjs';
 
 // Raw records arrive from data.gov.sg as strings, with "na" types for older years.
 const source = [
@@ -94,4 +94,30 @@ test('meta keeps its date when the data is unchanged and moves it when the data 
   assert.equal(buildMeta(previous, hash, now).updatedAt, previous.updatedAt);
   assert.equal(buildMeta(previous, 'different', now).updatedAt, now.toISOString());
   assert.equal(buildMeta(null, hash, now).updatedAt, now.toISOString());
+});
+
+test('boundaries are rounded to 5 dp with duplicate points and unused properties removed', () => {
+  const square = [[103.123456, 1.234561, 0], [103.123459, 1.234559, 0], [103.2, 1.23456], [103.2, 1.3], [103.123456, 1.234561, 0]];
+  const sliver = [[103.1, 1.1], [103.100001, 1.1], [103.1, 1.100001], [103.1, 1.1]];
+  const shrunk = shrinkGeoJson({
+    type: 'FeatureCollection', name: 'source', crs: { type: 'name' },
+    features: [
+      { type: 'Feature', properties: { ED_DESC: 'WEST COAST   ', OBJECTID: '13', 'SHAPE.AREA': '1' }, geometry: { type: 'Polygon', coordinates: [square, sliver] } },
+      { type: 'Feature', properties: { ED_DESC_FU: 'ALJUNIED GRC', Name: 'ALJUNIED' }, geometry: { type: 'MultiPolygon', coordinates: [[square], [sliver]] } },
+    ],
+  });
+  const ring = [[103.12346, 1.23456], [103.2, 1.23456], [103.2, 1.3], [103.12346, 1.23456]];
+  assert.deepEqual(shrunk, {
+    type: 'FeatureCollection',
+    features: [
+      { type: 'Feature', properties: { ED_DESC: 'WEST COAST' }, geometry: { type: 'Polygon', coordinates: [ring] } },
+      // A part that collapses to a point is dropped; a single remaining part becomes a Polygon.
+      { type: 'Feature', properties: { ED_DESC_FU: 'ALJUNIED GRC', Name: 'ALJUNIED' }, geometry: { type: 'Polygon', coordinates: [ring] } },
+    ],
+  });
+});
+
+test('a boundary that collapses entirely is an error, not a silent gap on the map', () => {
+  const sliver = [[103.1, 1.1], [103.100001, 1.1], [103.1, 1.100001], [103.1, 1.1]];
+  assert.throws(() => shrinkGeoJson({ type: 'FeatureCollection', features: [{ properties: { Name: 'TINY' }, geometry: { type: 'Polygon', coordinates: [sliver] } }] }), /TINY/);
 });

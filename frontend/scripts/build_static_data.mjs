@@ -15,6 +15,7 @@ import {
   formatJson,
   hashFiles,
   normaliseCandidateRows,
+  shrinkGeoJson,
 } from "./lib/staticData.mjs";
 
 const OUTPUT_DIR = new URL("../public/data/", import.meta.url);
@@ -53,7 +54,7 @@ async function main() {
     const year = Number(yearKey);
     console.log(`Fetching ${year} boundaries…`);
     files[`boundaries-${year}.json`] =
-      `${JSON.stringify(await fetchGeoJson(datasetId))}\n`;
+      `${JSON.stringify(shrinkGeoJson(await fetchGeoJson(datasetId)))}\n`;
     const mapSummary = buildMapSummary(results, year);
     if (!Object.keys(mapSummary.summary).length)
       console.warn(`  Warning: no results found for ${year}.`);

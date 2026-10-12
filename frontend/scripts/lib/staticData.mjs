@@ -136,6 +136,47 @@ export function buildMapSummary(results, year) {
   return { year, parties: [...partySet].sort(), summary };
 }
 
+// The only properties the map reads (see getBoundaryName in src/features/map/boundaryModel.js).
+const BOUNDARY_PROPERTIES = ["ED_DESC_FU", "ED_DESC", "Name"];
+const getBoundaryLabel = properties => BOUNDARY_PROPERTIES.map(key => text(properties?.[key])).find(Boolean) || "Unknown";
+
+// 5 decimal places is about 1 m on the ground, far finer than the map ever draws.
+// Rounding (rather than shape simplification) keeps shared borders identical in
+// neighbouring constituencies, so no gaps or overlaps can appear between them.
+function shrinkRing(ring, digits) {
+  const points = [];
+  for (const [lng, lat] of ring) {
+    const point = [round(lng, digits), round(lat, digits)];
+    const last = points.at(-1);
+    if (!last || last[0] !== point[0] || last[1] !== point[1]) points.push(point);
+  }
+  // A valid ring has at least three distinct corners plus the closing point.
+  return points.length >= 4 ? points : null;
+}
+
+function shrinkPolygon(rings, digits) {
+  const [outer, ...holes] = rings.map(ring => shrinkRing(ring, digits));
+  return outer ? [outer, ...holes.filter(Boolean)] : null;
+}
+
+export function shrinkGeoJson(geojson, digits = 5) {
+  const features = geojson.features.map(feature => {
+    const { type, coordinates } = feature.geometry;
+    const polygons = (type === "Polygon" ? [coordinates] : coordinates)
+      .map(polygon => shrinkPolygon(polygon, digits)).filter(Boolean);
+    const name = getBoundaryLabel(feature.properties);
+    if (!polygons.length) throw new Error(`Boundary ${name} has no usable shape after rounding.`);
+    const properties = {};
+    for (const key of BOUNDARY_PROPERTIES) {
+      const value = text(feature.properties?.[key]);
+      if (value) properties[key] = value;
+    }
+    const geometry = polygons.length === 1 ? { type: "Polygon", coordinates: polygons[0] } : { type: "MultiPolygon", coordinates: polygons };
+    return { type: "Feature", properties, geometry };
+  });
+  return { type: "FeatureCollection", features };
+}
+
 // Pretty enough to review in a PR diff: one array item or object entry per line,
 // without spreading every field across its own line.
 export function formatJson(value) {
