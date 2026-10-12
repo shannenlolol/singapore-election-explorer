@@ -198,12 +198,20 @@ export function hashFiles(files) {
   return hash.digest("hex");
 }
 
+// Takes the data files about to be written (name -> contents).
 // updatedAt only moves when the data changes, so a refetch with nothing new is a no-op diff.
-export function buildMeta(previous, contentHash, now = new Date()) {
+// boundaryYears comes from the boundary file names, so the map never offers a year without a file.
+export function buildMeta(previous, files, now = new Date()) {
+  const contentHash = hashFiles(files);
   const unchanged = previous?.contentHash === contentHash && previous?.updatedAt;
+  const boundaryYears = Object.keys(files)
+    .map(name => Number(name.match(/^boundaries-(\d{4})\.json$/)?.[1]))
+    .filter(Boolean)
+    .sort((a, b) => b - a);
   return {
     updatedAt: unchanged ? previous.updatedAt : now.toISOString(),
     contentHash,
+    boundaryYears,
     source: { name: "data.gov.sg", url: "https://data.gov.sg/" },
   };
 }

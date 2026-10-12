@@ -12,7 +12,6 @@ import {
   buildOptions,
   buildResults,
   formatJson,
-  hashFiles,
   mergeManualAdditions,
   normaliseCandidateRows,
   shrinkGeoJson,
@@ -69,7 +68,7 @@ async function main() {
   }
 
   // Everything is fetched before anything is written, so a failed run leaves the old files intact.
-  const meta = buildMeta(await readPreviousMeta(), hashFiles(files));
+  const meta = buildMeta(await readPreviousMeta(), files);
   files["meta.json"] = formatJson(meta);
   await mkdir(OUTPUT_DIR, { recursive: true });
   for (const [name, contents] of Object.entries(files))

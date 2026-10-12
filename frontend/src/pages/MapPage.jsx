@@ -4,7 +4,8 @@ import { MapContainer, TileLayer, GeoJSON, useMap } from "react-leaflet";
 import L from "leaflet";
 import { getWinnerPct, formatVotePct } from "../features/map/resultModel.js";
 import { normaliseConstituencyKey, getBoundaryName, getBoundaryResult, getBoundaryType } from "../features/map/boundaryModel.js";
-import { loadBoundaries, loadMapSummary } from "../data.js";
+import { loadBoundaries, loadMapSummary, loadMeta } from "../data.js";
+import { useResource } from "../features/dashboard/useResource.js";
 
 function upperTrim(value) {
   return String(value || "").trim().toUpperCase();
@@ -454,9 +455,9 @@ function BaseMapToggle({ value, onChange }) {
 }
 
 export default function MapPage() {
-  const years = useMemo(function () {
-    return [2025, 2020, 2015, 2011, 2006];
-  }, []);
+  // Years with boundary files, newest first, as written by the data build.
+  const meta = useResource("meta", loadMeta);
+  const years = useMemo(() => meta.data?.boundaryYears || [], [meta.data]);
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const SIDEBAR_WIDTH = 380;
@@ -466,7 +467,9 @@ export default function MapPage() {
   const HANDLE_WIDTH = 24;
   const leftInsetPx = sidebarCollapsed ? HANDLE_WIDTH : sidebarWidthPx || SIDEBAR_WIDTH;
 
-  const [year, setYear] = useState(years.length > 0 ? years[0] : 2025);
+  // null means "no choice yet": show the newest year once meta.json has loaded.
+  const [pickedYear, setYear] = useState(null);
+  const year = pickedYear ?? years[0] ?? null;
 
   // NEW: basemap style toggle
   // "default" = normal OSM tiles
@@ -491,7 +494,6 @@ export default function MapPage() {
   const [mapInstance, setMapInstance] = useState(null);
   const sidebarRef = useRef(null);
 
-  const DEFAULT_YEAR = years.length > 0 ? years[0] : 2025;
 
   const DEFAULT_TYPE = "ALL";
   const DEFAULT_CONTESTED = "ALL";
@@ -499,7 +501,7 @@ export default function MapPage() {
   const DEFAULT_CONSTITUENCY = "ALL";
 
   function resetFilters() {
-    setYear(DEFAULT_YEAR);
+    setYear(null);
     setTypeFilter(DEFAULT_TYPE);
     setPartyContestedFilter(DEFAULT_CONTESTED);
     setPartyWinnerFilter(DEFAULT_WINNER);
@@ -1022,9 +1024,9 @@ export default function MapPage() {
                 <div className="field">
                   <div className="label">Year</div>
                   <TypeaheadSelectBox
-                    value={String(year)}
+                    value={year ? String(year) : ""}
                     options={yearOptions}
-                    placeholder={String(year)}
+                    placeholder={year ? String(year) : "Loading…"}
                     direction="down"
                     onSelect={function (picked) {
                       const n = Number(picked);
@@ -1088,10 +1090,10 @@ export default function MapPage() {
                 </div>
 
                 <div className="map-sidebar-status" style={{ marginTop: 12 }}>
-                  {loading ? <div>Loading data…</div> : null}
-                  {errorText ? <div style={{ color: "crimson" }}>{errorText}</div> : null}
+                  {loading || meta.loading ? <div>Loading data…</div> : null}
+                  {errorText || meta.error ? <div style={{ color: "crimson" }}>{errorText || meta.error}</div> : null}
 
-                  {!loading && !errorText ? (
+                  {!loading && !errorText && year ? (
                     <div>
                       Matched areas: <b>{matchedCount}</b> / <b>{totalCount}</b>.
                     </div>

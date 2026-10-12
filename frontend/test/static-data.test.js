@@ -94,11 +94,18 @@ test('meta keeps its date when the data is unchanged and moves it when the data 
   const hash = hashFiles({ 'a.json': '1', 'b.json': '2' });
   assert.equal(hashFiles({ 'b.json': '2', 'a.json': '1' }), hash);
   assert.notEqual(hashFiles({ 'a.json': '1', 'b.json': '3' }), hash);
+  const files = { 'a.json': '1', 'b.json': '2' };
   const previous = { updatedAt: '2026-01-01T00:00:00.000Z', contentHash: hash };
   const now = new Date('2026-10-12T00:00:00Z');
-  assert.equal(buildMeta(previous, hash, now).updatedAt, previous.updatedAt);
-  assert.equal(buildMeta(previous, 'different', now).updatedAt, now.toISOString());
-  assert.equal(buildMeta(null, hash, now).updatedAt, now.toISOString());
+  assert.equal(buildMeta(previous, files, now).updatedAt, previous.updatedAt);
+  assert.equal(buildMeta(previous, { ...files, 'b.json': '3' }, now).updatedAt, now.toISOString());
+  assert.equal(buildMeta(null, files, now).updatedAt, now.toISOString());
+});
+
+test('meta lists boundary years from the boundary files, newest first', () => {
+  const files = { 'results.json': '[]', 'boundaries-2006.json': '{}', 'boundaries-2025.json': '{}', 'boundaries-2015.json': '{}', 'boundaries-notes.json': '{}' };
+  assert.deepEqual(buildMeta(null, files).boundaryYears, [2025, 2015, 2006]);
+  assert.deepEqual(buildMeta(null, { 'results.json': '[]' }).boundaryYears, []);
 });
 
 test('boundaries are rounded to 5 dp with duplicate points and unused properties removed', () => {
