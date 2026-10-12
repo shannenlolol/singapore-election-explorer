@@ -1,0 +1,97 @@
+# Fetches the latest data from data.gov.sg and opens a pull request if anything changed.
+# Run it by hand from the Actions tab (e.g. after a general election).
+# Opening the PR needs Settings → Actions → General → "Allow GitHub Actions to create and
+# approve pull requests". Without it, the branch is still pushed and the run summary links to it.
+name: Refresh election data
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+# Two refreshes at once would race to push near-identical branches.
+concurrency:
+  group: refresh-data
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      # Actions are pinned to commit SHAs so a moved tag can't change what runs here.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - run: npm ci
+      # Don't publish data built by broken code.
+      - run: npm test
+
+      - name: Build data from data.gov.sg
+        env:
+          # Optional; only raises data.gov.sg rate limits for the GeoJSON downloads.
+          DGS_API_KEY: ${{ secrets.DGS_API_KEY }}
+        run: |
+          set -o pipefail
+          npm run build:data 2>&1 | tee "$RUNNER_TEMP/build.log"
+
+      - name: Open a pull request if the data changed
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # The build only bumps meta.json when the data changes, so a clean tree means nothing new.
+          if [ -z "$(git status --porcelain -- public/data scripts/manual-additions.json)" ]; then
+            echo "No data changes since the last refresh; no pull request needed." | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          today=$(date -u +%Y-%m-%d)
+          branch="data-refresh/${today}-${GITHUB_RUN_ID}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git switch -c "$branch"
+          git add public/data scripts/manual-additions.json
+          git commit -m "chore: refresh election data from data.gov.sg"
+          git push origin "$branch"
+
+          body="$RUNNER_TEMP/pr-body.md"
+          {
+            echo "Automated refresh from data.gov.sg ([run #${GITHUB_RUN_NUMBER}](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}))."
+            echo
+            echo "### Build summary"
+            echo '```'
+            # Includes "now publishes … Removed from manual-additions.json" when data.gov.sg catches up.
+            grep -E "Merged |now publishes|Removed |Warning|Wrote |Data last updated" "$RUNNER_TEMP/build.log" || true
+            echo '```'
+            echo
+            echo "### Files changed"
+            echo '```'
+            git diff --stat HEAD~1 -- .
+            echo '```'
+            echo
+            echo "Review the \`results.json\` and \`options.json\` diffs before merging: one changed line is one changed contest or option."
+          } > "$body"
+
+          if url=$(gh pr create --base "$GITHUB_REF_NAME" --head "$branch" \
+              --title "chore: refresh election data (${today})" --body-file "$body"); then
+            echo "Opened ${url}" | tee -a "$GITHUB_STEP_SUMMARY"
+          else
+            compare="${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/compare/${GITHUB_REF_NAME}...${branch}?expand=1"
+            echo "::warning::Pushed ${branch} but could not open the pull request. Enable 'Allow GitHub Actions to create and approve pull requests', or open it by hand: ${compare}"
+            {
+              echo "Pushed \`${branch}\`, but the pull request could not be opened automatically."
+              echo
+              echo "Open it here: ${compare}"
+              echo
+              cat "$body"
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
