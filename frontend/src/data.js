@@ -27,6 +27,7 @@ function loadFile(name) {
 // Tests run every case against fresh fetch mocks.
 export const clearDataCache = () => cache.clear();
 
+export const loadMeta = () => loadFile("meta.json");
 export const loadOptions = () => loadFile("options.json");
 export const loadResults = () => loadFile("results.json");
 export const loadBoundaries = year => loadFile(`boundaries-${year}.json`);

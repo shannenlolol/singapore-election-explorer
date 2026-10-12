@@ -1,35 +1,20 @@
-import { useEffect, useState } from "react";
-import { apiGet } from "../api.js";
+import React from "react";
+import { useResource } from "../features/dashboard/useResource.js";
+import { loadMeta } from "../data.js";
 
+function dataStatusLabel({ data, error, loading }) {
+  if (loading) return "Checking data update time…";
+  const date = new Date(data?.updatedAt);
+  if (error || Number.isNaN(date.getTime())) return "Data update time unavailable";
+  return `Data last updated: ${date.toLocaleString("en-SG", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Singapore" })} SGT`;
+}
+
+// meta.json is part of the deployed site, so it only changes on a new deploy: one read is enough.
 export default function DataStatus() {
-  const [data, setData] = useState(null);
-  const [failed, setFailed] = useState(false);
-  useEffect(() => {
-    let cancelled = false;
-    async function refresh() {
-      try {
-        const next = await apiGet("/api/data-status");
-        if (!cancelled) { setData(next); setFailed(false); }
-      } catch {
-        if (!cancelled) setFailed(true);
-      }
-    }
-    refresh();
-    const timer = setInterval(refresh, 60000);
-    return () => { cancelled = true; clearInterval(timer); };
-  }, []);
-  const date = data?.lastUpdated ? new Date(data.lastUpdated) : null;
-  let label = failed ? "Data update time unavailable" : "Checking data update time…";
-  if (!failed && data) {
-    label = date && !Number.isNaN(date.getTime())
-      ? `Data last updated: ${date.toLocaleString("en-SG", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Singapore" })} SGT`
-      : "Data last updated: no completed import recorded";
-    if (data.status === "running") label += " · Update in progress";
-    if (data.status === "failed") label += " · Latest update failed; data may be incomplete";
-  }
+  const meta = useResource("meta", loadMeta);
   return (
     <div className="data-status">
-      <span aria-live="polite" title="Time of the last successful local import, not the source publication date.">{label}</span>
+      <span title="When this site's copy of the data last changed, not when data.gov.sg published it.">{dataStatusLabel(meta)}</span>
       <span>Source: <a href="https://data.gov.sg/" target="_blank" rel="noreferrer">data.gov.sg</a> · Historical data</span>
     </div>
   );
