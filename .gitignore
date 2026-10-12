@@ -8,5 +8,5 @@ logs/
 .env.*
 !.env.example
 .DS_Store
-docs/ROADMAP.md
 AGENTS.md
+TODO.md
