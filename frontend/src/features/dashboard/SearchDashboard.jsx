@@ -1,9 +1,8 @@
 import React from "react";
 import { useMemo, useRef, useState } from "react";
 import { useResource } from "./useResource.js";
-import { apiGet } from "../../api.js";
-import { loadOptions } from "../../data.js";
-import { emptyFilters, rowKey, searchQuery } from "./model.js";
+import { loadOptions, loadResults } from "../../data.js";
+import { emptyFilters, filterResults, rowKey, searchQuery } from "./model.js";
 import MultiFilter from "./MultiFilter.jsx";
 import ResultsTable from "./ResultsTable.jsx";
 import ConstituencyDetails from "./ConstituencyDetails.jsx";
@@ -13,9 +12,9 @@ export default function SearchDashboard() {
   const [filters, setFilters] = useState(emptyFilters);
   const [selected, setSelected] = useState(null);
   const trigger = useRef(null);
+  // Serialised filters; used as the table key so paging and sorting reset when filters change.
   const query = searchQuery(filters);
-  // Still served by the API until search filtering moves into the browser (next TODO item).
-  const results = useResource(options.data ? `search?${query}` : null, signal => apiGet(`/api/dashboard/search?${query}`, { signal }));
+  const results = useResource(options.data ? "results" : null, loadResults);
   const partyNames = useMemo(() => Object.fromEntries((options.data?.parties || []).map(party => [party.abbreviation, party.full_name])), [options.data]);
   const filterOptions = useMemo(() => {
     const data = options.data;
@@ -30,7 +29,7 @@ export default function SearchDashboard() {
   }, [options.data]);
   function closeDetails() { setSelected(null); trigger.current?.focus(); }
   function updateFilter(key, values) { setFilters(previous => ({ ...previous, [key]: values })); setSelected(null); }
-  const rows = results.data?.rows || [];
+  const rows = useMemo(() => filterResults(results.data || [], filters), [results.data, filters]);
   return <section aria-label="Search election results">
     <div className="search-panel-heading"><h2>Filter results</h2>
       <button onClick={() => { setFilters(emptyFilters()); setSelected(null); }}>Reset filters</button>
@@ -44,7 +43,6 @@ export default function SearchDashboard() {
       {results.error && <div role="alert"><p>{results.error}</p><button onClick={results.retry}>Retry results</button></div>}
       {results.data && <>
         <div className="results-heading"><p role="status"><strong>{rows.length}</strong> results</p></div>
-        {rows.length >= 800 && <p className="search-muted">Showing up to 800 results. Narrow the filters to see more specific matches.</p>}
         {!rows.length ? <div className="card-surface"><h2>No matching elections</h2><p>Try clearing a filter or resetting your search.</p></div> : <div className={`search-content${selected ? " has-details" : ""}`}>
           <div className="card-surface search-results"><ResultsTable key={query} rows={rows} selected={selected} partyNames={partyNames} onSelect={(row, element) => { trigger.current = element; setSelected(row); }} /></div>
           {selected && <ConstituencyDetails key={rowKey(selected)} selected={selected} onClose={closeDetails} partyNames={partyNames} />}

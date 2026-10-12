@@ -10,6 +10,23 @@ export function searchQuery(filters) {
   }
   return params.toString();
 }
+// Browser version of the API's /search query. Filters combine with AND; values within one
+// filter combine with OR. "contesting" matches when any selected party stood in the contest.
+// `q` is a case-insensitive "name contains" match. Rows keep their input order
+// (results.json is already newest year first, then by name), and there is no row limit.
+export function filterResults(rows, filters = {}) {
+  const selected = key => new Set((filters[key] || []).map(String));
+  const years = selected("years"), contesting = selected("contesting"), winners = selected("winners");
+  const types = selected("types"), constituencies = selected("constituencies");
+  const q = String(filters.q || "").trim().toLowerCase();
+  return rows.filter(row =>
+    (!years.size || years.has(String(row.year)))
+    && (!winners.size || winners.has(row.winner_party))
+    && (!types.size || types.has(row.constituency_type))
+    && (!constituencies.size || constituencies.has(row.constituency))
+    && (!contesting.size || splitParties(row.contesting_parties).some(party => contesting.has(party)))
+    && (!q || row.constituency.toLowerCase().includes(q)));
+}
 export function formatNumber(value) {
   return value === null || value === undefined || value === "" || !Number.isFinite(Number(value))
     ? "—" : Number(value).toLocaleString("en-SG");

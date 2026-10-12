@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { emptyFilters, searchQuery, formatPercent, formatNumber, splitCandidates, sortRows, rowKey } from '../src/features/dashboard/model.js';
+import { emptyFilters, filterResults, searchQuery, formatPercent, formatNumber, splitCandidates, sortRows, rowKey } from '../src/features/dashboard/model.js';
 
 test('empty filters omit query constraints, selecting all results', () => {
   assert.equal(searchQuery(emptyFilters()), '');
@@ -34,4 +34,46 @@ test('numeric sorting handles margins correctly, preserves input, and puts nulls
 });
 test('constituency selection identifies the year as well as name', () => {
   assert.notEqual(rowKey({ year: 2020, constituency: 'Hougang' }), rowKey({ year: 2025, constituency: 'Hougang' }));
+});
+
+// Shaped like results.json rows: contested, walkover and tied contests across years and types.
+const searchRows = [
+  { year: 2025, constituency: 'Aljunied', constituency_type: 'GRC', outcome: 'contested', winner_party: 'WP', contesting_parties: 'PAP,WP' },
+  { year: 2025, constituency: 'Marine Parade-Braddell Heights', constituency_type: 'GRC', outcome: 'walkover', winner_party: 'PAP', contesting_parties: 'PAP' },
+  { year: 2020, constituency: 'Aljunied', constituency_type: 'GRC', outcome: 'contested', winner_party: 'WP', contesting_parties: 'PAP,WP' },
+  { year: 2020, constituency: 'Bukit Panjang', constituency_type: 'SMC', outcome: 'contested', winner_party: 'PAP', contesting_parties: 'PAP,SDP' },
+  { year: 1963, constituency: 'Tied Town', constituency_type: null, outcome: 'tie', winner_party: null, contesting_parties: 'A,B' },
+];
+const names = rows => rows.map(row => `${row.year} ${row.constituency}`);
+
+test('no filters return every row, in order and without the old 800-row cap', () => {
+  assert.deepEqual(filterResults(searchRows, emptyFilters()), searchRows);
+  const many = Array.from({ length: 900 }, (_, index) => ({ ...searchRows[0], constituency: `Area ${index}` }));
+  assert.equal(filterResults(many, emptyFilters()).length, 900);
+});
+
+test('values within a filter are OR-ed and different filters are AND-ed', () => {
+  assert.deepEqual(names(filterResults(searchRows, { years: ['2020', '1963'] })), ['2020 Aljunied', '2020 Bukit Panjang', '1963 Tied Town']);
+  assert.deepEqual(names(filterResults(searchRows, { years: ['2020'], types: ['SMC'] })), ['2020 Bukit Panjang']);
+  assert.deepEqual(names(filterResults(searchRows, { winners: ['WP'], years: ['2025'] })), ['2025 Aljunied']);
+  assert.deepEqual(names(filterResults(searchRows, { constituencies: ['Aljunied'] })), ['2025 Aljunied', '2020 Aljunied']);
+  assert.deepEqual(filterResults(searchRows, { years: ['2015'] }), []);
+});
+
+test('contesting party matches any selected party, as whole party names', () => {
+  assert.deepEqual(names(filterResults(searchRows, { contesting: ['SDP', 'B'] })), ['2020 Bukit Panjang', '1963 Tied Town']);
+  // "P" must not match "PAP", as FIND_IN_SET never did.
+  assert.deepEqual(filterResults(searchRows, { contesting: ['P'] }), []);
+});
+
+test('walkovers and ties are kept: walkovers by their sole party, ties only without a winner filter', () => {
+  assert.deepEqual(names(filterResults(searchRows, { contesting: ['PAP'], years: ['2025'] })), ['2025 Aljunied', '2025 Marine Parade-Braddell Heights']);
+  assert.ok(names(filterResults(searchRows, { winners: ['PAP'] })).includes('2025 Marine Parade-Braddell Heights'));
+  assert.deepEqual(names(filterResults(searchRows, { contesting: ['A'] })), ['1963 Tied Town']);
+  assert.ok(!filterResults(searchRows, { winners: ['A', 'B'] }).length);
+});
+
+test('constituency text search is a case-insensitive contains match', () => {
+  assert.deepEqual(names(filterResults(searchRows, { q: '  BRADDELL ' })), ['2025 Marine Parade-Braddell Heights']);
+  assert.deepEqual(names(filterResults(searchRows, { q: 'jun' })), ['2025 Aljunied', '2020 Aljunied']);
 });
