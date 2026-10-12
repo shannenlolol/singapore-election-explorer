@@ -1,18 +1,23 @@
-import { useEffect, useState } from "react";
-import { apiGet } from "../../api.js";
+import { useEffect, useEffectEvent, useState } from "react";
 
-export function useResource(path) {
+// Runs load(signal) whenever key changes (or on retry). A null key loads nothing.
+// Only the result for the current key and attempt is kept, so a slow earlier
+// response can never overwrite a newer one.
+export function useResource(key, load) {
   const [attempt, setAttempt] = useState(0);
   const [result, setResult] = useState(null);
+  // Read the latest loader without re-running the effect for every new function identity.
+  const run = useEffectEvent(signal => load(signal));
   useEffect(() => {
-    if (!path) return;
+    if (!key) return;
     const controller = new AbortController();
-    apiGet(path, { signal: controller.signal }).then(
-      data => { if (!controller.signal.aborted) setResult({ path, attempt, data }); },
-      error => { if (!controller.signal.aborted) setResult({ path, attempt, error: error.message }); },
+    // Wrapping in a promise turns a synchronous throw into an error state too.
+    new Promise(resolve => resolve(run(controller.signal))).then(
+      data => { if (!controller.signal.aborted) setResult({ key, attempt, data }); },
+      error => { if (!controller.signal.aborted) setResult({ key, attempt, error: error.message }); },
     );
     return () => controller.abort();
-  }, [path, attempt]);
-  const current = result?.path === path && result?.attempt === attempt ? result : null;
-  return { data: current?.data, error: current?.error, loading: Boolean(path && !current), retry: () => setAttempt(value => value + 1) };
+  }, [key, attempt]);
+  const current = result?.key === key && result?.attempt === attempt ? result : null;
+  return { data: current?.data, error: current?.error, loading: Boolean(key && !current), retry: () => setAttempt(value => value + 1) };
 }

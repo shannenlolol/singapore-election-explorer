@@ -3,14 +3,14 @@ import React, { useEffect, useRef } from "react";
 import { ChevronDown, UserRound, X } from "lucide-react";
 import { partyColor } from "./summaryModel.js";
 import { useResource } from "./useResource.js";
+import { loadContest } from "../../data.js";
 import { formatNumber, formatPercent, splitCandidates } from "./model.js";
 
 export default function ConstituencyDetails({ selected, onClose, partyNames }) {
   const heading = useRef(null);
-  const params = new URLSearchParams({ year: selected.year, constituency: selected.constituency });
-  const { data, error, loading, retry } = useResource(`/api/dashboard/details?${params}`);
+  const { data, error, loading, retry } = useResource(JSON.stringify([selected.year, selected.constituency]), () => loadContest(selected.year, selected.constituency));
   useEffect(() => { heading.current?.focus(); }, [selected]);
-  const parties = data?.parties || [];
+  const parties = data?.contestants || [];
   const maxVotes = Math.max(1, ...parties.map(party => Number(party.vote_count) || 0));
   return (
     <aside className="search-details card-surface" aria-labelledby="constituency-heading" onKeyDown={event => { if (event.key === "Escape") onClose(); }}>
@@ -45,13 +45,13 @@ export default function ConstituencyDetails({ selected, onClose, partyNames }) {
               return <li key={`${party.party}-${party.candidates}`}>
                 <details className="candidate-group" style={{ "--party-color": partyColor(party.party) }}>
                   <summary>
-                    <span className="candidate-party"><strong title={party.party_full_name || partyNames[party.party]}>{party.party}</strong><ChevronDown size={16} aria-hidden="true" /></span>
+                    <span className="candidate-party"><strong title={partyNames[party.party]}>{party.party}</strong><ChevronDown size={16} aria-hidden="true" /></span>
                     {repeatedParty && <span className="candidate-identity">{party.candidates}</span>}
                     <span className="candidate-votes">{formatNumber(party.vote_count)} votes · {formatPercent(party.vote_share, 2, 100)}</span>
                     <span className="candidate-hint">{names.length ? `${names.length} ${names.length === 1 ? "candidate" : "candidates"}` : "Candidate names unavailable"}</span>
                   </summary>
                   <div className="candidate-list">
-                    <p>{party.party_full_name || partyNames[party.party] || party.party}</p>
+                    <p>{partyNames[party.party] || party.party}</p>
                     {names.length ? <ul className="candidate-profiles">{names.map((name, index) => <li key={`${name}-${index}`}><span className="candidate-avatar" aria-hidden="true"><UserRound size={24} /></span><span>{name}</span></li>)}</ul> : <p>No candidate names available.</p>}
                   </div>
                 </details>

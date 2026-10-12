@@ -1,5 +1,5 @@
 // Pure transforms from raw data.gov.sg records to the static JSON files in public/data/.
-// They reproduce what the Express API returned, so the frontend can swap fetches for files.
+// The map summary is derived in the browser from results.json (src/features/map/mapSummary.js).
 import { createHash } from "node:crypto";
 // CommonJS module shared with the API until backend/ is removed.
 import calculations from "../../../backend/domain/electionResults.js";
@@ -131,39 +131,6 @@ export function buildOptions({ results, candidateRows, partyRecords, dateRecords
     constituencies: results.map(({ year, constituency, constituency_type }) => ({ year, constituency, constituency_type })),
     election_dates: [...dates.values()].sort((a, b) => a.year - b.year),
   };
-}
-
-// Boundary files name constituencies "ALJUNIED GRC", while results use "Aljunied" plus a type.
-export function constituencyKey(constituency, type) {
-  const name = text(constituency).toUpperCase();
-  if (!name || name.endsWith(" SMC") || name.endsWith(" GRC") || !SEAT_TYPES.includes(type)) return name;
-  return `${name} ${type}`;
-}
-
-// Same shape as /api/boundaries/summary. Party vote shares are pooled for the legend
-// (e.g. several independents), but the winner's share is that single contestant's.
-export function buildMapSummary(results, year) {
-  const summary = {};
-  const partySet = new Set();
-  for (const row of results.filter(result => result.year === year)) {
-    const parties = {};
-    for (const contestant of row.contestants) {
-      const party = contestant.party.toUpperCase();
-      partySet.add(party);
-      parties[party] ??= { votePct: contestant.vote_share === null ? null : 0 };
-      if (contestant.vote_share !== null) parties[party].votePct += contestant.vote_share * 100;
-    }
-    for (const entry of Object.values(parties)) entry.votePct = round(entry.votePct, 4);
-    const winner = row.contestants[0];
-    summary[constituencyKey(row.constituency, row.constituency_type)] = {
-      winnerParty: row.winner_party ? row.winner_party.toUpperCase() : null,
-      winnerVotePct: row.winner_party && winner?.vote_share != null ? round(winner.vote_share * 100, 4) : null,
-      outcome: row.outcome,
-      constituencyType: row.constituency_type,
-      parties,
-    };
-  }
-  return { year, parties: [...partySet].sort(), summary };
 }
 
 // The only properties the map reads (see getBoundaryName in src/features/map/boundaryModel.js).

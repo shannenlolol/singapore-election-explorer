@@ -1,9 +1,10 @@
 import React from "react";
 import { afterEach, beforeEach, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import SearchDashboard from '../src/features/dashboard/SearchDashboard.jsx';
+import { clearDataCache } from '../src/data.js';
 
 const options = {
   years: [2025, 2020],
@@ -15,18 +16,22 @@ const details = {
   parties: [{ party: 'WP', party_full_name: "Workers' Party", vote_count: 79254, vote_share: 0.5971, candidates: 'Alice | Bob; Carol' }],
   elector: { no_of_registered_electors: 144298, no_of_rejected_votes: 1342, no_of_spoilt_ballot_papers: null },
 };
-let requests, rejectDetails, rejectSearch, holdDetails, fetchCalls;
+// Details now come from results.json; every search row gets the `details` contestants when requested.
+const contestRows = () => rows.map(row => ({ ...row, outcome: details.outcome || 'contested', elector: details.elector, contestants: details.parties }));
+const loadError = 'Could not load election data (503).';
+let requests, rejectDetails, rejectSearch, holdDetails, releaseDetails, fetchCalls;
 const originalFetch = globalThis.fetch;
 beforeEach(() => {
   requests = []; rejectDetails = false; rejectSearch = false; holdDetails = false;
   fetchCalls = [];
+  clearDataCache();
   globalThis.fetch = async (path, init) => {
     fetchCalls.push([path, init]);
     requests.push(String(path));
-    if (path.includes('/options')) return { ok: true, json: async () => options };
-    if (path.includes('/details')) {
-      if (holdDetails) return new Promise((resolve, reject) => init.signal.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError'))));
-      return { ok: !rejectDetails, status: 503, json: async () => rejectDetails ? { message: 'Details temporarily unavailable' } : details };
+    if (path === '/data/options.json') return { ok: true, json: async () => options };
+    if (path === '/data/results.json') {
+      if (holdDetails) await new Promise(resolve => { releaseDetails = resolve; });
+      return { ok: !rejectDetails, status: 503, json: async () => rejectDetails ? null : contestRows() };
     }
     if (rejectSearch) return { ok: false, status: 503, json: async () => ({ message: 'Search temporarily unavailable' }) };
     const query = new URL(String(path), 'http://localhost').searchParams;
@@ -60,7 +65,7 @@ test('selection loads matching details, preserves units and missing values, and 
   await user.click(within(panel).getByText('3 candidates'));
   assert.ok(within(panel).getAllByText('—').length > 0);
   for (const name of ['Alice', 'Bob', 'Carol']) assert.ok(within(panel).getByText(name));
-  assert.equal(requests.some(path => path.includes('year=2025&constituency=Aljunied')), true);
+  assert.equal(requests.includes('/data/results.json'), true);
   await user.keyboard('{Escape}');
   assert.equal(screen.queryByRole('complementary'), null);
   assert.equal(document.activeElement, trigger);
@@ -87,7 +92,7 @@ test('detail errors can be retried without discarding search results', async () 
   rejectDetails = true;
   render(<SearchDashboard />);
   await user.click(await screen.findByRole('button', { name: 'View Aljunied 2025 details' }));
-  await screen.findByText('Details temporarily unavailable');
+  await screen.findByText(loadError);
   rejectDetails = false;
   await user.click(screen.getByRole('button', { name: 'Retry details' }));
   await screen.findByText('79,254 votes · 59.71%');
@@ -103,24 +108,24 @@ test('search failures show an error and retry recovers', async () => {
   await screen.findByRole('button', { name: 'View Aljunied 2025 details' });
 });
 
-test('closing a loading detail panel aborts its request', async () => {
+test('closing a loading detail panel discards its late result', async () => {
   const user = userEvent.setup();
   holdDetails = true;
   render(<SearchDashboard />);
   await user.click(await screen.findByRole('button', { name: 'View Aljunied 2025 details' }));
   await screen.findByText('Loading constituency details…');
-  const detailCall = fetchCalls.find(([path]) => path.includes('/details'));
   await user.click(screen.getByRole('button', { name: 'Close constituency details' }));
-  assert.equal(detailCall[1].signal.aborted, true);
+  await act(async () => releaseDetails());
   assert.equal(screen.queryByRole('complementary'), null);
+  assert.equal(screen.queryByText(loadError), null);
 });
 
 test('options failure is recoverable and does not trigger a search prematurely', async () => {
   const user = userEvent.setup();
   const normalFetch = globalThis.fetch;
-  globalThis.fetch = async () => ({ ok: false, status: 503, json: async () => ({ message: 'Filters unavailable' }) });
+  globalThis.fetch = async () => ({ ok: false, status: 503, json: async () => null });
   render(<SearchDashboard />);
-  await screen.findByText('Filters unavailable');
+  await screen.findByText(loadError);
   assert.equal(screen.queryByRole('table'), null);
   globalThis.fetch = normalFetch;
   await user.click(screen.getByRole('button', { name: 'Retry filters' }));
@@ -143,6 +148,8 @@ test('detail panel distinguishes independent contestants and explains walkovers 
     assert.ok(within(votes).getByText('Candidate One', { selector: '.candidate-identity' }));
     assert.ok(within(votes).getByText('Candidate Two', { selector: '.candidate-identity' }));
     cleanup();
+    // results.json is cached per page load; this second render stands for a fresh one.
+    clearDataCache();
     details.outcome = 'walkover';
     details.parties = [{ party: 'PAP', candidates: 'Team', vote_count: null, vote_share: null }];
     render(<SearchDashboard />);

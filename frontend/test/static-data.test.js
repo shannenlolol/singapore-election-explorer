@@ -1,7 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { buildMapSummary, buildMeta, buildOptions, buildResults, constituencyKey, formatJson, hashFiles, mergeManualAdditions, normaliseCandidateRows, shrinkGeoJson } from '../scripts/lib/staticData.mjs';
+import { buildMeta, buildOptions, buildResults, formatJson, hashFiles, mergeManualAdditions, normaliseCandidateRows, shrinkGeoJson } from '../scripts/lib/staticData.mjs';
+import { buildMapSummary, constituencyKey } from '../src/features/map/mapSummary.js';
 
 // Raw records arrive from data.gov.sg as strings, with "na" types for older years.
 const source = [
@@ -64,7 +65,10 @@ test('options list years, every party label, constituencies and election dates',
   ]);
 });
 
+// Contract between results.json and the map: the browser derives the map summary from built rows.
 test('map summary keys match boundary names and pools party shares but not the winner share', () => {
+  // vote_share is stored to 6 dp, so percentages agree to about 4 dp.
+  const close = (actual, expected) => assert.ok(Math.abs(actual - expected) < 0.0001, `${actual} != ${expected}`);
   assert.equal(constituencyKey('Aljunied', 'GRC'), 'ALJUNIED GRC');
   assert.equal(constituencyKey('Bukit Panjang SMC', 'SMC'), 'BUKIT PANJANG SMC');
   assert.equal(constituencyKey('Farrer Park', null), 'FARRER PARK');
@@ -74,8 +78,8 @@ test('map summary keys match boundary names and pools party shares but not the w
   assert.equal(map2025.summary['MARINE PARADE-BRADDELL HEIGHTS GRC'].parties.PAP.votePct, null);
   const farrer = buildMapSummary(results, 1959).summary['FARRER PARK'];
   assert.equal(farrer.winnerParty, 'INDEPENDENT');
-  assert.equal(farrer.parties.INDEPENDENT.votePct, Number(((4077 + 311) / 8220 * 100).toFixed(4)));
-  assert.equal(farrer.winnerVotePct, Number((4077 / 8220 * 100).toFixed(4)));
+  close(farrer.parties.INDEPENDENT.votePct, (4077 + 311) / 8220 * 100);
+  close(farrer.winnerVotePct, 4077 / 8220 * 100);
 });
 
 test('formatted JSON parses back unchanged with one item per line', () => {

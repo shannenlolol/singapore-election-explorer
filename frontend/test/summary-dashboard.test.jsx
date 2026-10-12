@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import SummaryDashboard from '../src/features/dashboard/SummaryDashboard.jsx';
+import { clearDataCache } from '../src/data.js';
 
 const originalFetch = globalThis.fetch;
 let rows, options, failResults, failOptions;
@@ -11,10 +12,11 @@ beforeEach(() => {
   rows = [{ year: 2020, winner_party: 'WP' }, { year: 2025, winner_party: 'PAP' }, { year: 2025, winner_party: 'WP' }];
   options = { election_dates: [{ year: 2025, nomination_day: '2025-04-22T16:00:00Z', polling_day: '2025-05-03' }, { year: 2020, nomination_day: null, polling_day: '2020-07-10' }], parties: Array.from({ length: 18 }, (_, i) => ({ abbreviation: `P${String(i).padStart(2, '0')}`, full_name: `Party ${i}` })) };
   failResults = false; failOptions = false;
+  clearDataCache();
   globalThis.fetch = async path => {
-    const isOptions = path.includes('options');
+    const isOptions = path === '/data/options.json';
     const failed = isOptions ? failOptions : failResults;
-    return { ok: !failed, status: 503, json: async () => failed ? { message: 'Temporary service failure' } : isOptions ? options : { rows } };
+    return { ok: !failed, status: 503, json: async () => failed ? null : isOptions ? options : rows };
   };
 });
 afterEach(() => { cleanup(); globalThis.fetch = originalFetch; });
@@ -79,10 +81,12 @@ test('reference failures retry independently from loaded charts', async () => {
   await user.click(await screen.findByText('Election dates', { selector: 'summary' }));
   await screen.findByRole('table', { name: 'Election dates' });
 });
-test('the API result cap is disclosed rather than presented as a complete history', async () => {
-  rows = Array.from({ length: 800 }, () => ({ year: 2025, winner_party: 'PAP' }));
+test('the summary counts every result, with no 800-row cap', async () => {
+  rows = Array.from({ length: 900 }, () => ({ year: 2025, winner_party: 'PAP' }));
   render(<SummaryDashboard />);
-  await screen.findByText('This summary covers the API’s first 800 results and may be incomplete.');
+  const metric = await screen.findByText('Constituency results');
+  assert.equal(metric.parentElement.querySelector('strong').textContent, '900');
+  assert.equal(screen.queryByText(/first 800 results/), null);
 });
 
 

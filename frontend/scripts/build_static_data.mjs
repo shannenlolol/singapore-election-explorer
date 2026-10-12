@@ -1,6 +1,6 @@
 // Fetches every dataset from data.gov.sg and writes the static JSON the site serves.
 // Usage (from frontend/): npm run build:data   (optional: DGS_API_KEY=... for GeoJSON downloads)
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import {
   BOUNDARY_DATASET_BY_YEAR,
   DATASETS,
@@ -8,7 +8,6 @@ import {
   fetchGeoJson,
 } from "./lib/dataGovSg.mjs";
 import {
-  buildMapSummary,
   buildMeta,
   buildOptions,
   buildResults,
@@ -65,10 +64,8 @@ async function main() {
     console.log(`Fetching ${year} boundaries…`);
     files[`boundaries-${year}.json`] =
       `${JSON.stringify(shrinkGeoJson(await fetchGeoJson(datasetId)))}\n`;
-    const mapSummary = buildMapSummary(results, year);
-    if (!Object.keys(mapSummary.summary).length)
+    if (!results.some((row) => row.year === year))
       console.warn(`  Warning: no results found for ${year}.`);
-    files[`map-summary-${year}.json`] = formatJson(mapSummary);
   }
 
   // Everything is fetched before anything is written, so a failed run leaves the old files intact.
@@ -77,6 +74,13 @@ async function main() {
   await mkdir(OUTPUT_DIR, { recursive: true });
   for (const [name, contents] of Object.entries(files))
     await writeFile(new URL(name, OUTPUT_DIR), contents);
+  // The build owns this folder: delete files it no longer produces (e.g. a dropped year).
+  for (const name of await readdir(OUTPUT_DIR)) {
+    if (name.endsWith(".json") && !(name in files)) {
+      await rm(new URL(name, OUTPUT_DIR));
+      console.log(`Removed ${name}, which the build no longer produces.`);
+    }
+  }
   // data.gov.sg has caught up on these contests, so its rows were used instead. Remove the
   // stale entries from the file so the refresh PR shows the clean-up for review.
   if (stale.length) {

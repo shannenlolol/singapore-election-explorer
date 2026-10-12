@@ -4,6 +4,7 @@ import { MapContainer, TileLayer, GeoJSON, useMap } from "react-leaflet";
 import L from "leaflet";
 import { getWinnerPct, formatVotePct } from "../features/map/resultModel.js";
 import { normaliseConstituencyKey, getBoundaryName, getBoundaryResult, getBoundaryType } from "../features/map/boundaryModel.js";
+import { loadBoundaries, loadMapSummary } from "../data.js";
 
 function upperTrim(value) {
   return String(value || "").trim().toUpperCase();
@@ -512,15 +513,7 @@ export default function MapPage() {
       setLoading(true);
       setErrorText("");
       try {
-        const responses = await Promise.all([
-          fetch(`/api/boundaries?year=${year}`, { signal: controller.signal }),
-          fetch(`/api/boundaries/summary?year=${year}`, { signal: controller.signal }),
-        ]);
-        const [geojson, details] = await Promise.all(responses.map(async response => {
-          const data = await response.json();
-          if (!response.ok) throw new Error(data.message || "Could not load map data.");
-          return data;
-        }));
+        const [geojson, details] = await Promise.all([loadBoundaries(year), loadMapSummary(year)]);
         if (controller.signal.aborted) return;
         setGeoByYear(previous => ({ ...previous, [year]: geojson }));
         setSummaryByYear(previous => ({

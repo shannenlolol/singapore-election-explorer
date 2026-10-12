@@ -3,9 +3,10 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { act, cleanup, render, screen } from '@testing-library/react';
 import { useResource } from '../src/features/dashboard/useResource.js';
+import { fetchJson } from '../src/data.js';
 
 function Resource({ path }) {
-  const resource = useResource(path);
+  const resource = useResource(path, signal => fetchJson(path, signal));
   return <p>{resource.loading ? 'Loading' : resource.data?.label}</p>;
 }
 

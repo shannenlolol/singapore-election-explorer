@@ -1,18 +1,21 @@
 import React from "react";
 import { useMemo, useRef, useState } from "react";
 import { useResource } from "./useResource.js";
+import { apiGet } from "../../api.js";
+import { loadOptions } from "../../data.js";
 import { emptyFilters, rowKey, searchQuery } from "./model.js";
 import MultiFilter from "./MultiFilter.jsx";
 import ResultsTable from "./ResultsTable.jsx";
 import ConstituencyDetails from "./ConstituencyDetails.jsx";
 
 export default function SearchDashboard() {
-  const options = useResource("/api/dashboard/options");
+  const options = useResource("options", loadOptions);
   const [filters, setFilters] = useState(emptyFilters);
   const [selected, setSelected] = useState(null);
   const trigger = useRef(null);
   const query = searchQuery(filters);
-  const results = useResource(options.data ? `/api/dashboard/search?${query}` : null);
+  // Still served by the API until search filtering moves into the browser (next TODO item).
+  const results = useResource(options.data ? `search?${query}` : null, signal => apiGet(`/api/dashboard/search?${query}`, { signal }));
   const partyNames = useMemo(() => Object.fromEntries((options.data?.parties || []).map(party => [party.abbreviation, party.full_name])), [options.data]);
   const filterOptions = useMemo(() => {
     const data = options.data;
