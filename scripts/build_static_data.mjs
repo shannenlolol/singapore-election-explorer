@@ -1,5 +1,5 @@
 // Fetches every dataset from data.gov.sg and writes the static JSON the site serves.
-// Usage (from frontend/): npm run build:data   (optional: DGS_API_KEY=... for GeoJSON downloads)
+// Usage: npm run build:data   (optional: DGS_API_KEY=... for GeoJSON downloads)
 import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import {
   BOUNDARY_DATASET_BY_YEAR,

@@ -1,5 +1,5 @@
 {
-  "name": "@singapore-election-explorer/frontend",
+  "name": "singapore-election-explorer",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -15,7 +15,6 @@
   "dependencies": {
     "leaflet": "^1.9.4",
     "lucide-react": "^0.563.0",
-    "papaparse": "^5.5.3",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-leaflet": "^5.0.0",
