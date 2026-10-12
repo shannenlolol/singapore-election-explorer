@@ -1,12 +1,12 @@
 // Source rows represent individual candidates (SMC) or whole teams (GRC).
 // Multiple independents in one constituency are separate contestants.
-function optionalNumber(value) {
+export function optionalNumber(value) {
   if (value == null || String(value).trim() === "") return null;
   const number = Number(value);
   return Number.isFinite(number) && number >= 0 ? number : null;
 }
 
-function analyseContest(rows, elector = {}) {
+export function analyseContest(rows, elector = {}) {
   const contestants = rows.map(row => ({
     party: row.party,
     candidates: row.candidates || "",
@@ -32,7 +32,7 @@ function analyseContest(rows, elector = {}) {
   };
 }
 
-function groupContests(rows) {
+export function groupContests(rows) {
   const groups = new Map();
   for (const row of rows) {
     const key = JSON.stringify([Number(row.year), row.constituency]);
@@ -42,4 +42,3 @@ function groupContests(rows) {
   return groups;
 }
 
-module.exports = { optionalNumber, analyseContest, groupContests };

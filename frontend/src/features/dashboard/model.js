@@ -10,7 +10,7 @@ export function searchQuery(filters) {
   }
   return params.toString();
 }
-// Browser version of the API's /search query. Filters combine with AND; values within one
+// Browser version of the v1 API's /search query. Filters combine with AND; values within one
 // filter combine with OR. "contesting" matches when any selected party stood in the contest.
 // `q` is a case-insensitive "name contains" match. Rows keep their input order
 // (results.json is already newest year first, then by name), and there is no row limit.

@@ -1,7 +1,9 @@
-const { test } = require('node:test');
-const assert = require('node:assert/strict');
-const { analyseContest, optionalNumber } = require('../domain/electionResults');
-const { records } = require('./fixtures/source-results.json');
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { analyseContest, optionalNumber } from '../scripts/lib/electionResults.mjs';
+
+const { records } = JSON.parse(readFileSync(new URL('./fixtures/source-results.json', import.meta.url), 'utf8'));
 const contest = (year, name) => records.filter(row => Number(row.year) === year && row.constituency === name);
 const close = (actual, expected) => assert.ok(Math.abs(actual - expected) < 0.00001, `${actual} != ${expected}`);
 

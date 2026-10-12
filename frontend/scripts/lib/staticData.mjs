@@ -1,10 +1,7 @@
 // Pure transforms from raw data.gov.sg records to the static JSON files in public/data/.
 // The map summary is derived in the browser from results.json (src/features/map/mapSummary.js).
 import { createHash } from "node:crypto";
-// CommonJS module shared with the API until backend/ is removed.
-import calculations from "../../../backend/domain/electionResults.js";
-
-const { analyseContest, groupContests, optionalNumber } = calculations;
+import { analyseContest, groupContests, optionalNumber } from "./electionResults.mjs";
 const SEAT_TYPES = ["GRC", "SMC"];
 
 const text = value => String(value ?? "").trim();
@@ -13,12 +10,12 @@ const toInt = value => {
   return number !== null && Number.isSafeInteger(number) ? number : null;
 };
 const toDate = value => text(value).slice(0, 10) || null;
-// Matches the DECIMAL precision the API used, and keeps the files small.
+// Matches the DECIMAL precision the v1 API used, and keeps the files small.
 const round = (value, digits) => (value === null ? null : Number(value.toFixed(digits)));
 const byYearDescThenName = (a, b) => b.year - a.year || a.constituency.localeCompare(b.constituency);
 
 // Mirrors the import: trim, skip incomplete rows, and keep the last copy of a duplicated
-// (year, constituency, party, candidates) row, as the MySQL upsert did.
+// (year, constituency, party, candidates) row, as the original MySQL import did.
 export function normaliseCandidateRows(records) {
   const rows = new Map();
   for (const record of records) {
@@ -81,7 +78,7 @@ export function normaliseElectorRecords(records) {
   return electors;
 }
 
-// One row per contest. Combines the API's /search row with what /details returned.
+// One row per contest. Combines the v1 API's /search row with what /details returned.
 export function buildResults(candidateRows, electorRecords) {
   const electors = normaliseElectorRecords(electorRecords);
   const results = [];

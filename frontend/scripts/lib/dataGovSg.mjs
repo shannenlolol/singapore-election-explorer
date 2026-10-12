@@ -1,4 +1,4 @@
-// Fetch helpers for data.gov.sg, ported from backend/scripts/sync_data_gov_sg.mjs.
+// Fetch helpers for data.gov.sg (originally the v1 MySQL import script; see tag v1-express-mysql).
 
 export const DATASETS = {
   parties: "d_ef163fd9ebc3c2f21032c29da3bd3f77",
